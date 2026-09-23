@@ -170,7 +170,8 @@ failed pop leaves the tree conflicted, and the second repo would be pulled
 after the first had already failed.
 
 Then `install`, then run `post-pull.sh` from each package if present and
-executable, public first, with `cwd` set to the package. A non-zero hook exit
+executable, public first, with `cwd` set to the package. `--no-hooks` skips
+the hooks; `post-pull.sh` installs packages and is slow. A non-zero hook exit
 is a fatal `hook_failed` error with the package name and exit code; the
 second hook still does not run (matches `set -e` in the script).
 
@@ -230,12 +231,140 @@ Conflicts are reported all at once, one line each, before exiting.
 
 ## Testing
 
-Every symlink test runs against a temp root and temp target, never `$HOME`.
-The parity suite builds a fixture tree, runs real `stow` (skipped when not on
-`PATH`) and `dfm` on copies, and diffs the resulting link trees. Fixture cases:
-single-package fold, two-package unfold, refold after removal, package-local
-symlink, ignore-list exclusion, conflict with a regular file, broken link
-cleanup.
+Never `$HOME`, never `~/dotfiles`. Every test builds its own root and target
+under `t.TempDir()`. Four layers.
+
+### Step driver
+
+Fixtures are sequences, not trees. A fixture is `{name, steps []step}` where a
+step is a mutation to the root or target (add file, delete file, add a
+package file over a folded dir, drop a regular file in the target) or a run.
+A run is a comparison point. Refold, dangling-link cleanup, and idempotence
+all need a run, a mutation, and another run; a single-tree fixture cannot
+express them. The same driver serves layers 1 and 2. Fixture cases run under
+`t.Parallel()`; nothing is shared between them.
+
+### Layer 1: stow parity
+
+Two temp dirs per fixture. Stow owns one, `dfm` owns the other, from the
+first step. Each mutation is applied to both dirs, then both tools run (in
+parallel via `errgroup`), then the two targets are walked on disk and every
+`(relative path, link text)` pair and every regular file is diffed. A
+divergence fails at the step it appears.
+
+Cases: single-package fold; two packages populate one dir and it unfolds;
+refold when the second owner's file is deleted; symlink committed inside a
+package; ignore-list exclusion with `.stow-local-ignore` present and absent;
+conflict with a pre-existing regular file; dangling link after a package
+file is deleted; `dfm` twice yields zero actions on the second run. Cross-tool
+no-op cases run both tools on one dir in sequence: stow then `dfm` reports
+zero actions and leaves the tree unchanged, and the reverse.
+
+Stow is `stow --dir=<root> --target=<target> --restow public private`,
+version 2.4.1 exactly. The suite skips, loudly, when `stow` is not on `PATH`
+or `stow --version` is not 2.4.1. CI builds 2.4.1 from the GNU tarball
+(`./configure && make && sudo make install`, Perl only, seconds) with the
+version in one workflow variable, so CI never skips. Locally the suite skips
+once `brew 'stow'` leaves the Brewfile.
+
+This layer is scaffolding for the first release. When `dfm` deviates from
+stow on purpose, the affected fixtures move to layer 2 with hand-written
+expectations and a `## Decisions` entry. When the last one moves, delete the
+suite and the CI stow install. Layer 2 is permanent; layer 1 exists to seed
+its expected trees with stow's actual behavior rather than a reading of the
+manual.
+
+### Real-shape fixture
+
+`testdata/real-shape/` is a committed fixture with the shape of the real
+`~/dotfiles` and redacted names. A dev-only generator
+(`go run ./internal/tools/shapegen`, never run by tests) walks both real
+repos and builds one consistent rename map, so a path both packages populate
+gets the same fake name in both. Preserved: directory tree shape and depth;
+which package owns each path and where they overlap; symlinks inside a
+package with targets remapped; the executable bit; both `.stow-local-ignore`
+lists with any pattern naming a file rewritten through the map. Redacted:
+every file and directory name below the top level, in both packages. The
+top-level names already in this document stay. Contents are always empty.
+
+Regenerate by hand when the real layout changes enough to matter. Before
+committing, review the `git diff` and grep the output for anything resembling
+a hostname, an email, an employer name, or a customer: a directory name can
+be as sensitive as a file name, and the top-level exemption is the place a
+leak would slip through.
+
+### Layer 2: behavioral tests
+
+Same driver and fixtures, no stow, expectations hand-written as `(relative
+path, link text)` lists plus the expected action counts. Runs everywhere.
+Covers what stow cannot verify: exit codes (`0`; `1` with `already_tracked`,
+`not_tracked`, `dirty_tree`, `bad_ignore_pattern`, `hook_failed`; `2` on
+conflict; `4` on git failure); `--dry-run` prints the plan and leaves the
+tree byte-for-byte unchanged; `--json` shape, one object per action then
+`_meta`; fatal errors are exactly one JSON object on stderr with `error`,
+`detail`, `hint`, `path`; every conflict is reported before exit and nothing
+changed; `public`/`private` path resolution, the inside-`$HOME` check, the
+already-in-`~/dotfiles` refusal, and the resulting tree; `ignore` ownership
+detection and the already-present case.
+
+Most tests drive `cmd` in-process with `--root`/`--target` and captured
+stdout/stderr so coverage counts them. A few run the built binary to prove
+exit codes are real process exit codes.
+
+### Layer 3: git
+
+`git init --bare` in the temp dir is the remote. Clone it into
+`<root>/public` and `<root>/private`, commit a seed tree, push. A second
+clone plays another machine: commit there, push, and `dfm pull` has
+something to fetch. No network, no GitHub. `GIT_CONFIG_GLOBAL=/dev/null`,
+`HOME` set to the temp dir, author identity via env vars, so the real
+gitconfig, signing key, and hooks never leak in. `git` is on every runner,
+so nothing skips.
+
+Cases: clean trees and remote ahead, both rebase, `install` runs, tree
+reflects new files; private dirty and public clean, `dirty_tree` names
+private, exit 1, public HEAD did not move; both dirty, error names both; an
+untracked file counts as dirty; `post-pull.sh` runs public then private with
+`cwd` set to the package, proven by the hook writing `$PWD` to a file;
+public hook fails, `hook_failed` carries package and exit code, private hook
+never runs; hook present but not executable is skipped; `--no-hooks` runs
+neither; origin pointed at a nonexistent path exits 4.
+
+### Layer 4: release gate, by hand
+
+Once per release, against the real machine. Never automated; the only thing
+that touches the real `$HOME` is a person watching.
+
+1. Install the cask. `dfm version` matches the tag.
+2. Snapshot the link tree. Before `dfm` is trusted for anything:
+
+   ```sh
+   find ~ -maxdepth 4 -path ~/Library -prune -o -path ~/src -prune -o -type l -lname '*/dotfiles/*' -exec ls -l {} + | sort > before.txt
+   ```
+
+   The unpruned scan takes 19s on this machine and picks up mise state and
+   `Library` links that are not stow's; pruned it takes 0.4s and returns the
+   127 links `install` owns. From the first release on, `dfm status --json`
+   is the snapshot tool.
+3. `dfm install --dry-run`. Expect zero planned actions. Any action is a
+   parity bug; stop and investigate.
+4. `dfm status`. Expect no conflicts and no broken links.
+5. `dfm install`.
+6. Snapshot again, `diff before.txt after.txt`. Expect empty.
+
+Remediation if step 5 breaks the tree, valid for every release and needing
+neither stow nor a prior `dfm`: `before.txt` has every owned link and its
+target. Remove each link that points into `~/dotfiles`, then recreate the
+snapshot:
+
+```sh
+awk '{print $9, $11}' before.txt | while read -r link target; do rm -f "$link"; ln -s "$target" "$link"; done
+```
+
+Fallbacks: GitHub Releases keeps every tarball, so the previous `dfm` is one
+`curl` away, and `dfm status` on the broken version still reports what is
+dangling even when `install` is what is wrong. Stow leaves the Brewfile only
+after this gate passes for the first release.
 
 ## Decisions
 
@@ -259,6 +388,9 @@ cleanup.
   over both repos return nothing.
 - 2026-09-23: Distributed as Homebrew cask `tammersaleh/tap/dotfiles-manager`.
   Add the Brewfile line with the first release.
+- 2026-09-23: `pull --no-hooks` skips `post-pull.sh`.
+- 2026-09-23: Stow parity suite is first-release scaffolding, CI-only once
+  stow leaves this machine; deleted once `dfm` intentionally deviates.
 - 2026-09-23: `fresh-install.sh` stays a shell script in the first release.
   `dfm bootstrap` is planned for a second release; see below.
 
