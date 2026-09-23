@@ -23,8 +23,8 @@ same commands, so `alias dotfiles=dfm` is the only migration step.
   more than by agents, unlike the siblings. Progress lines on stderr; `--json`
   switches stdout to the sibling JSONL contract.
 - **First release starts after clone.** `dfm` assumes both repos are cloned
-  and readable. Whether it later absorbs `fresh-install.sh` (Homebrew,
-  git-crypt, LFS) is open question 6.
+  and readable. `fresh-install.sh` stays a shell script for now; see
+  `## Planned: dfm bootstrap`.
 
 ## Layout (fixed, matches today)
 
@@ -35,7 +35,8 @@ same commands, so `alias dotfiles=dfm` is the only migration step.
 $HOME                  target (stow --target)
 ```
 
-Package order is always `public` then `private`. Root and target are
+The package list is hardcoded: `public` then `private`, always in that order.
+There is no flag to add packages. Root and target are
 overridable by `--root` and `--target` (and `DFM_ROOT`, `DFM_TARGET`) for
 tests; the defaults are the paths above.
 
@@ -145,17 +146,28 @@ exit 1, nothing moved.
 
 ### `dfm ignore <path>`
 
-Append `/<path>` to `~/dotfiles/public/.gitignore`. That is all the script
-does. If the line is already present, say so and exit 0 without appending.
-Which repo's `.gitignore` is open question 1.
+Append `/<path>` to the `.gitignore` of the package that owns `<path>`.
+`<path>` resolves like `public`/`private` (relative to `$HOME`, or absolute).
+Ownership is decided by following the `$HOME` symlink chain for the path or
+its nearest linked ancestor into `~/dotfiles/<package>/`. If no package owns
+it: error `not_tracked`, exit 1. No flag overrides the choice. If the line is
+already present, say so and exit 0 without appending.
+
+The script only ever wrote the public `.gitignore`; autodetection is a
+recorded decision.
 
 ### `dfm pull`
 
-For each package, in order: `git stash push -u --quiet -m "In dotfiles pull"`,
-`git fetch --all --quiet`, `git rebase FETCH_HEAD --quiet`, `git stash pop
---quiet`, then print `git status --short --untracked-files`. The script also
-touches and removes a `.force-stash` marker so the stash is never empty; `dfm`
-detects "nothing to stash" directly and skips the pop.
+First check every package with `git status --porcelain --untracked-files`. If
+any package is dirty, error `dirty_tree` naming every dirty package, exit 1,
+nothing fetched. There is no `--autostash`.
+
+Then for each package, in order: `git fetch --all --quiet`, `git rebase
+FETCH_HEAD --quiet`, then print `git status --short --untracked-files`.
+
+The script stashed, rebased, and popped per package. That is dropped: a
+failed pop leaves the tree conflicted, and the second repo would be pulled
+after the first had already failed.
 
 Then `install`, then run `post-pull.sh` from each package if present and
 executable, public first, with `cwd` set to the package. A non-zero hook exit
@@ -210,8 +222,8 @@ Conflicts are reported all at once, one line each, before exiting.
 ### Exit codes
 
 - `0` success (including `--dry-run`)
-- `1` general error (bad arguments, `already_tracked`, `hook_failed`,
-  `bad_ignore_pattern`)
+- `1` general error (bad arguments, `already_tracked`, `not_tracked`,
+  `dirty_tree`, `hook_failed`, `bad_ignore_pattern`)
 - `2` conflict: a target path exists and is not ours; nothing was changed
 - `3` reserved (siblings use it for rate limits; kept for consistency)
 - `4` git or network error
@@ -236,77 +248,34 @@ cleanup.
 - 2026-09-23: `public`/`private` drop the `$PWD == $HOME` requirement and
   resolve paths instead.
 - 2026-09-23: `status` is the only new command in the first release.
+- 2026-09-23: `ignore` autodetects which package owns the path and writes
+  that package's `.gitignore`. No `--public`/`--private` override.
+- 2026-09-23: `pull` refuses on a dirty tree. Both packages are checked before
+  either is fetched. No `--autostash`.
+- 2026-09-23: Package list is hardcoded (`public`, `private`). No `--package`
+  flag; a third package is a `feat:`.
+- 2026-09-23: Stow's `--dotfiles` mode (`dot-foo` -> `.foo`) is not supported.
+  Verified: `rg -l --hidden -g '!.git' '^dot-|/dot-'` and `fd -H -u dot-`
+  over both repos return nothing.
+- 2026-09-23: Distributed as Homebrew cask `tammersaleh/tap/dotfiles-manager`.
+  Add the Brewfile line with the first release.
+- 2026-09-23: `fresh-install.sh` stays a shell script in the first release.
+  `dfm bootstrap` is planned for a second release; see below.
 
-## Open questions
+## Planned: `dfm bootstrap`
 
-Answer these in a fresh session before the first `feat:`. Each has the
-context needed to decide without re-reading the bash script.
+Second release, after `install` parity is proven on this machine.
 
-### 1. Which `.gitignore` does `ignore` write?
+Today `fresh-install.sh` runs on a bare machine: installs Homebrew, then
+`stow git git-lfs git-crypt bash`, clones both repos with a temporary GitHub
+token, runs `git lfs checkout` in public and `git-crypt unlock ~/key` in
+private, deletes the stray `~/.gitconfig` LFS creates, runs `dotfiles
+install`, then `~/packages/go`. A failure mid-script leaves a half-set-up
+machine and a clear-text token in shell history.
 
-Today `dotfiles ignore <path>` appends `/<path>` to the public repo's
-`.gitignore` only. Proposal: keep that default, add `--private` to target the
-private repo instead.
+`dfm bootstrap --token ... --key ~/key` replaces everything after Homebrew is
+installed, with real error handling, `--dry-run`, and idempotent re-runs. A
+short `curl` line installs Homebrew and `dfm`; something has to fetch `dfm`
+before `dfm` can run, so a shell stage exists either way. Homebrew install
+itself is not absorbed.
 
-### 2. Should `pull` stash over uncommitted work?
-
-Today: `git stash push -u`, `fetch`, `rebase FETCH_HEAD`, `stash pop`, per
-repo. The global git-hygiene rule forbids stashing or rebasing over
-uncommitted work because a pop can leave files conflicted. Proposal: refuse
-when the tree is dirty (exit 1, hint to commit), with `--autostash` restoring
-today's behavior.
-
-### 3. Hardcode the package list or discover it?
-
-Today the script hardcodes `public` then `private`. Discovering every
-directory under `~/dotfiles` that contains `.git` would also pick up
-`~/dotfiles/doc`. Proposal: hardcode, allow repeated `--package` to add.
-
-### 4. Does anything depend on stow's `--dotfiles` mode?
-
-Stow's `--dotfiles` maps `dot-foo` in the package to `.foo` in the target.
-The script does not pass it and both repos appear to use literal dot-names.
-Confirm with `rg -l '^dot-|/dot-' ~/dotfiles/public ~/dotfiles/private`
-before dropping support entirely.
-
-### 5. Homebrew cask or `go install`?
-
-The public siblings ship a cask from `tammersaleh/homebrew-tap`; the private
-one uses `go install`. This repo is public, so the cask is the plan and
-`.goreleaser.yml` already has the block. Confirm, then add
-`cask 'tammersaleh/tap/dotfiles-manager'` to the Brewfile with the first
-release.
-
-### 6. Should `dfm` absorb `fresh-install.sh`?
-
-The scaffold left fresh-install as a shell script. Reasons it was left out,
-none of them decisive:
-
-- Bootstrap ordering. `fresh-install.sh` runs on a bare machine before
-  Homebrew exists. It installs Homebrew, then `stow git git-lfs git-crypt
-  bash`, clones both repos with a temporary GitHub token, runs `git lfs
-  checkout` in public and `git-crypt unlock ~/key` in private, deletes the
-  stray `~/.gitconfig` LFS creates, runs `dotfiles install`, then
-  `~/packages/go`. Something has to fetch `dfm` before `dfm` can run, so a
-  shell (or `curl | sh`) stage exists either way.
-- The steps are mostly shelling out to other tools (`brew`, `git`,
-  `git-crypt`, `git lfs`), which a Go binary would wrap without adding
-  behavior.
-- Scope: "behave exactly like the current system" was read as the five
-  `dotfiles` commands plus stow.
-
-Reasons to absorb it anyway:
-
-- The `curl` stage can be a one-liner that downloads the release tarball
-  from GitHub, and `dfm bootstrap --token ... --key ~/key` does the rest with
-  real error handling, `--dry-run`, and idempotent re-runs. Today a failure
-  mid-script leaves a half-set-up machine and a clear-text token in shell
-  history.
-- One binary, one place to read what "install my machine" means.
-- If `dfm` owns cloning, it can own the repo list and remote URLs, which
-  question 3 also wants.
-
-Options: (a) leave it as a shell script, (b) `dfm bootstrap` replaces
-everything after Homebrew is installed, with a tiny `curl` line that installs
-Homebrew and `dfm`, (c) full absorption including the Homebrew install.
-Proposal: (b), as a second release after `install` parity is proven.

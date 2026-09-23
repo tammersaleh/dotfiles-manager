@@ -13,8 +13,9 @@ they do.
 
 ## Status
 
-Stub, scaffolded 2026-09-23. Nothing implemented. Start on SPEC.md's open
-questions, then `dfm install` with the stow parity suite.
+Stub, scaffolded 2026-09-23. Nothing implemented. SPEC.md open questions are
+all answered (see its `## Decisions`). Start on `dfm install` with the stow
+parity suite.
 
 ## The system being replaced
 
