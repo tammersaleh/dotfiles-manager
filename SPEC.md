@@ -22,9 +22,9 @@ same commands, so `alias dotfiles=dfm` is the only migration step.
 - **Human output by default, `--json` for agents.** This tool is run by hand
   more than by agents, unlike the siblings. Progress lines on stderr; `--json`
   switches stdout to the sibling JSONL contract.
-- **No git-crypt, no Homebrew, no LFS.** Fresh-install bootstrapping
-  (`fresh-install.sh`) stays a shell script. `dfm` starts once both repos are
-  cloned and readable.
+- **First release starts after clone.** `dfm` assumes both repos are cloned
+  and readable. Whether it later absorbs `fresh-install.sh` (Homebrew,
+  git-crypt, LFS) is open question 6.
 
 ## Layout (fixed, matches today)
 
@@ -147,110 +147,76 @@ exit 1, nothing moved.
 
 Append `/<path>` to `~/dotfiles/public/.gitignore`. That is all the script
 does. If the line is already present, say so and exit 0 without appending.
-Which repo's `.gitignore` is a `## Open questions` item.
+Which repo's `.gitignore` is a `## Open questions
 
-### `dfm pull`
+Answer these in a fresh session before the first `feat:`. Each has the
+context needed to decide without re-reading the bash script.
 
-For each package, in order: `git stash push -u --quiet -m "In dotfiles pull"`,
-`git fetch --all --quiet`, `git rebase FETCH_HEAD --quiet`, `git stash pop
---quiet`, then print `git status --short --untracked-files`. The script also
-touches and removes a `.force-stash` marker so the stash is never empty; `dfm`
-detects "nothing to stash" directly and skips the pop.
+### 1. Which `.gitignore` does `ignore` write?
 
-Then `install`, then run `post-pull.sh` from each package if present and
-executable, public first, with `cwd` set to the package. A non-zero hook exit
-is a fatal `hook_failed` error with the package name and exit code; the
-second hook still does not run (matches `set -e` in the script).
+Today `dotfiles ignore <path>` appends `/<path>` to the public repo's
+`.gitignore` only. Proposal: keep that default, add `--private` to target the
+private repo instead.
 
-Git operations shell out to `git`; no go-git. Exit 4 when git fails to reach
-the remote.
+### 2. Should `pull` stash over uncommitted work?
 
-### `dfm status`
+Today: `git stash push -u`, `fetch`, `rebase FETCH_HEAD`, `stash pop`, per
+repo. The global git-hygiene rule forbids stashing or rebasing over
+uncommitted work because a pop can leave files conflicted. Proposal: refuse
+when the tree is dirty (exit 1, hint to commit), with `--autostash` restoring
+today's behavior.
 
-New, read-only. Report per-package: repo dirty or clean, ahead/behind the
-remote, and any `$HOME` conflicts or broken links the next `install` would hit.
-Zero side effects. This is the one addition to the surface in the first
-release because every other command needs the same planning code and it gives
-`--dry-run` a home.
+### 3. Hardcode the package list or discover it?
 
-### `dfm version`
+Today the script hardcodes `public` then `private`. Discovering every
+directory under `~/dotfiles` that contains `.git` would also pick up
+`~/dotfiles/doc`. Proposal: hardcode, allow repeated `--package` to add.
 
-Module version from build info, or the GoReleaser `ldflags` value when set.
+### 4. Does anything depend on stow's `--dotfiles` mode?
 
-## Global flags
+Stow's `--dotfiles` maps `dot-foo` in the package to `.foo` in the target.
+The script does not pass it and both repos appear to use literal dot-names.
+Confirm with `rg -l '^dot-|/dot-' ~/dotfiles/public ~/dotfiles/private`
+before dropping support entirely.
 
-- `--root <dir>` / `DFM_ROOT` (default `~/dotfiles`)
-- `--target <dir>` / `DFM_TARGET` (default `$HOME`)
-- `--dry-run` on every mutating command; prints the plan and exits 0
-- `--json` JSONL on stdout, one object per action, then `_meta`
-- `--verbose` echo every filesystem and git operation to stderr
-- `--quiet` suppress progress lines (errors still print)
+### 5. Homebrew cask or `go install`?
 
-## Output
+The public siblings ship a cask from `tammersaleh/homebrew-tap`; the private
+one uses `go install`. This repo is public, so the cask is the plan and
+`.goreleaser.yml` already has the block. Confirm, then add
+`cask 'tammersaleh/tap/dotfiles-manager'` to the Brewfile with the first
+release.
 
-Default (human) mode writes progress to stderr and nothing to stdout except
-what the wrapped commands print (`git status` in `pull`). `--json` mode:
+### 6. Should `dfm` absorb `fresh-install.sh`?
 
-```
-$ dfm install --json
-{"action":"link","package":"public","path":".zshenv","target":"dotfiles/public/.zshenv"}
-{"action":"unlink","package":"private","path":".old-thing","reason":"source_missing"}
-{"action":"unfold","package":"public","path":".config"}
-{"_meta":{"has_more":false,"created":1,"removed":1,"unfolded":1,"refolded":0}}
-```
+The scaffold left fresh-install as a shell script. Reasons it was left out,
+none of them decisive:
 
-Fatal errors are a single JSON object on stderr regardless of `--json`:
+- Bootstrap ordering. `fresh-install.sh` runs on a bare machine before
+  Homebrew exists. It installs Homebrew, then `stow git git-lfs git-crypt
+  bash`, clones both repos with a temporary GitHub token, runs `git lfs
+  checkout` in public and `git-crypt unlock ~/key` in private, deletes the
+  stray `~/.gitconfig` LFS creates, runs `dotfiles install`, then
+  `~/packages/go`. Something has to fetch `dfm` before `dfm` can run, so a
+  shell (or `curl | sh`) stage exists either way.
+- The steps are mostly shelling out to other tools (`brew`, `git`,
+  `git-crypt`, `git lfs`), which a Go binary would wrap without adding
+  behavior.
+- Scope: "behave exactly like the current system" was read as the five
+  `dotfiles` commands plus stow.
 
-```json
-{"error":"conflict","detail":".gitconfig exists and is not a dotfiles symlink","hint":"dfm public .gitconfig to adopt it, or remove it and rerun","path":".gitconfig"}
-```
+Reasons to absorb it anyway:
 
-Conflicts are reported all at once, one line each, before exiting.
+- The `curl` stage can be a one-liner that downloads the release tarball
+  from GitHub, and `dfm bootstrap --token ... --key ~/key` does the rest with
+  real error handling, `--dry-run`, and idempotent re-runs. Today a failure
+  mid-script leaves a half-set-up machine and a clear-text token in shell
+  history.
+- One binary, one place to read what "install my machine" means.
+- If `dfm` owns cloning, it can own the repo list and remote URLs, which
+  question 3 also wants.
 
-### Exit codes
-
-- `0` success (including `--dry-run`)
-- `1` general error (bad arguments, `already_tracked`, `hook_failed`,
-  `bad_ignore_pattern`)
-- `2` conflict: a target path exists and is not ours; nothing was changed
-- `3` reserved (siblings use it for rate limits; kept for consistency)
-- `4` git or network error
-
-## Testing
-
-Every symlink test runs against a temp root and temp target, never `$HOME`.
-The parity suite builds a fixture tree, runs real `stow` (skipped when not on
-`PATH`) and `dfm` on copies, and diffs the resulting link trees. Fixture cases:
-single-package fold, two-package unfold, refold after removal, package-local
-symlink, ignore-list exclusion, conflict with a regular file, broken link
-cleanup.
-
-## Decisions
-
-- 2026-09-23: Repo is `tammersaleh/dotfiles-manager`, module
-  `github.com/tammersaleh/dotfiles-manager`, binary `dfm`. Public.
-- 2026-09-23: Verb-first command names kept from the bash script
-  (`install`, `public`, `private`, `ignore`, `pull`) for drop-in parity.
-- 2026-09-23: Stow is reimplemented, not shelled out to. `brew 'stow'` leaves
-  the Brewfile once `dfm install` is verified on this machine.
-- 2026-09-23: `public`/`private` drop the `$PWD == $HOME` requirement and
-  resolve paths instead.
-- 2026-09-23: `status` is the only new command in the first release.
-- 2026-09-23: Fresh-install bootstrapping stays in `fresh-install.sh`.
-
-## Open questions
-
-- `ignore` writes only the public `.gitignore` today. Keep that, or take a
-  `--private` flag? Default proposal: keep, add `--private`.
-- Should `pull` keep the stash-rebase-pop dance, or refuse when the tree is
-  dirty? The global git-hygiene rule forbids stashing over uncommitted work.
-  Proposal: refuse by default, `--autostash` to get today's behavior.
-- Should `install` ever be implied? Today `public`/`private`/`pull` all call
-  it. Keep that.
-- Package list: hardcode `public`, `private`, or discover every directory
-  under the root that contains `.git`? Discovery would also pick up
-  `~/dotfiles/doc`. Proposal: hardcode, allow `--package` to add.
-- Does anything depend on stow's `--dotfiles` mode (`dot-` prefix)? Believed
-  no; confirm by grepping both repos for `dot-`.
-- Homebrew cask (siblings) versus `go install`. Cask is the plan; the tap
-  already hosts the siblings.
+Options: (a) leave it as a shell script, (b) `dfm bootstrap` replaces
+everything after Homebrew is installed, with a tiny `curl` line that installs
+Homebrew and `dfm`, (c) full absorption including the Homebrew install.
+Proposal: (b), as a second release after `install` parity is proven.
