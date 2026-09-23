@@ -49,19 +49,20 @@ func mustParse(t *testing.T, args ...string) *cmd.CLI {
 
 func TestStubs_NotImplemented(t *testing.T) {
 	tests := []struct {
-		name string
-		args []string
+		name    string
+		args    []string
+		command string // expected "dfm <command>" in detail
 	}{
-		{"install", []string{"install"}},
-		{"public", []string{"public", ".examplerc"}},
-		{"private", []string{"private", ".examplerc"}},
-		{"ignore", []string{"ignore", ".examplerc"}},
-		{"pull", []string{"pull"}},
-		{"pull --no-hooks", []string{"pull", "--no-hooks"}},
-		{"status", []string{"status"}},
-		{"install --json", []string{"--json", "install"}},
-		{"install --quiet", []string{"--quiet", "install"}},
-		{"install --dry-run", []string{"--dry-run", "install"}},
+		{"install", []string{"install"}, "install"},
+		{"public", []string{"public", ".examplerc"}, "public"},
+		{"private", []string{"private", ".examplerc"}, "private"},
+		{"ignore", []string{"ignore", ".examplerc"}, "ignore"},
+		{"pull", []string{"pull"}, "pull"},
+		{"pull --no-hooks", []string{"pull", "--no-hooks"}, "pull"},
+		{"status", []string{"status"}, "status"},
+		{"install --json", []string{"--json", "install"}, "install"},
+		{"install --quiet", []string{"--quiet", "install"}, "install"},
+		{"install --dry-run", []string{"--dry-run", "install"}, "install"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -76,15 +77,8 @@ func TestStubs_NotImplemented(t *testing.T) {
 			if m["error"] != "not_implemented" {
 				t.Errorf("error = %v, want not_implemented", m["error"])
 			}
-			cmdName := tt.args[len(tt.args)-1]
-			if strings.HasPrefix(cmdName, "-") || cmdName == ".examplerc" {
-				cmdName = tt.args[0]
-				if strings.HasPrefix(cmdName, "-") {
-					cmdName = tt.args[1]
-				}
-			}
-			if d, _ := m["detail"].(string); !strings.Contains(d, "dfm "+cmdName) {
-				t.Errorf("detail = %q should name 'dfm %s'", d, cmdName)
+			if d, _ := m["detail"].(string); !strings.Contains(d, "dfm "+tt.command) {
+				t.Errorf("detail = %q should name 'dfm %s'", d, tt.command)
 			}
 			if h, _ := m["hint"].(string); h == "" {
 				t.Error("hint should be present")
