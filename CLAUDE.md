@@ -13,9 +13,9 @@ they do.
 
 ## Status
 
-Stub, scaffolded 2026-09-23. Nothing implemented. SPEC.md open questions are
-all answered (see its `## Decisions`). Start on `dfm install` with the stow
-parity suite.
+v1.0.0 (2026-09-23): CLI skeleton, global flags, `dfm version`,
+`internal/output`. Every other command is a `not_implemented` stub. `PLAN.md`
+tracks feature order and discoveries; read it before starting work.
 
 ## The system being replaced
 
@@ -166,12 +166,16 @@ Homebrew cask `tammersaleh/tap/dotfiles-manager` (`Casks/dotfiles-manager.rb`
 in `tammersaleh/homebrew-tap`), written by GoReleaser on each release. The
 Brewfile line is `cask 'tammersaleh/tap/dotfiles-manager'` in
 `~/dotfiles/public/packages/Brewfile`; `~/packages/go` installs and upgrades
-it. Until the first release the Brewfile line is absent because the cask does
-not exist yet; add it with the first `feat:`.
+it. The Brewfile line landed with v1.0.0.
 
 "Installed and verified" in the Workflow means `brew upgrade
 tammersaleh/tap/dotfiles-manager` (or `~/packages/go dotfiles-manager`) of the
-tag just cut, then `dfm version` matching it.
+tag just cut, then `dfm version` matching it. `~/packages/go <name>` only
+upgrades an already-installed package; the very first install was
+`brew install --cask tammersaleh/tap/dotfiles-manager`.
+
+Release-please cut the first release as 1.0.0 (manifest scaffolded at 0.0.0,
+`feat:` bumps major pre-1.0). Not a bug.
 
 Chicken-and-egg: `dfm` will one day remove `brew 'stow'` from the Brewfile,
 and `~/packages/go` runs from a stowed symlink. Keep stow in the Brewfile

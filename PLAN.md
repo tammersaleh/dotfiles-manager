@@ -23,7 +23,7 @@ inline as work lands.
 
 Each entry is one sub-agent run and one release (or none for `chore:`).
 
-1. [x] `feat: cli skeleton with version` (pushed 1f952e9, 2026-09-23; 0.1.0 pending) - Kong root with global flags
+1. [x] `feat: cli skeleton with version` (pushed 1f952e9, released v1.0.0, installed and verified 2026-09-23) - Kong root with global flags
    (`--root`, `--target`, `--dry-run`, `--json`, `--verbose`, `--quiet`,
    env `DFM_ROOT`/`DFM_TARGET`), `dfm version` from build info or ldflags,
    `internal/output` (human stderr progress, JSONL rows plus `_meta`
@@ -84,6 +84,15 @@ Give every feature agent:
 - 2026-09-23: dotfiles-public default branch is `master`, remote is SSH and
   fingerprint-gated. Push with
   `git push https://github.com/tammersaleh/dotfiles-public.git HEAD:master`.
+- 2026-09-23: release-please's first release from the scaffold manifest is
+  1.0.0, not 0.1.0. Plan numbering assumed 0.1.0; irrelevant, moving on.
+- 2026-09-23: `~/packages/go dotfiles-manager` fails with "not a brew
+  package" when the cask is not yet installed. First install is
+  `brew install --cask tammersaleh/tap/dotfiles-manager`; upgrades go through
+  `~/packages/go dotfiles-manager`.
+- 2026-09-23: GoReleaser's cask template emits a deprecated `postflight`
+  block (Homebrew warns, install still works). Same in the siblings; fix
+  belongs in the GoReleaser upgrade, not here.
 - 2026-09-23: `cmd.Run(args, stdout, stderr) int` is the in-process entry
   point. `--root`/`--target` resolve lazily via `cli.RootDir()`/`TargetDir()`
   so tests override with `t.Setenv("HOME", t.TempDir())`. Kong exit is
