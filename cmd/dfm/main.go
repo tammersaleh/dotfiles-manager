@@ -3,11 +3,11 @@
 package main
 
 import (
-	"fmt"
 	"os"
+
+	"github.com/tammersaleh/dotfiles-manager/cmd"
 )
 
 func main() {
-	fmt.Fprintln(os.Stderr, "dfm: not implemented yet")
-	os.Exit(1)
+	os.Exit(cmd.Run(os.Args[1:], os.Stdout, os.Stderr))
 }
