@@ -4,7 +4,8 @@
 `~/dotfiles/private`) symlinked into `$HOME`. It replaces the `bin/dotfiles`
 bash script and GNU Stow with one binary that produces the same symlink tree.
 
-Status: stub. See `SPEC.md`.
+Status: CLI skeleton only. `dfm version` works; every other command exits 1
+with `not_implemented`. See `SPEC.md` and `PLAN.md`.
 
 ## Install
 
