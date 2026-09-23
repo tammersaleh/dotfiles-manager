@@ -147,7 +147,97 @@ exit 1, nothing moved.
 
 Append `/<path>` to `~/dotfiles/public/.gitignore`. That is all the script
 does. If the line is already present, say so and exit 0 without appending.
-Which repo's `.gitignore` is a `## Open questions
+Which repo's `.gitignore` is open question 1.
+
+### `dfm pull`
+
+For each package, in order: `git stash push -u --quiet -m "In dotfiles pull"`,
+`git fetch --all --quiet`, `git rebase FETCH_HEAD --quiet`, `git stash pop
+--quiet`, then print `git status --short --untracked-files`. The script also
+touches and removes a `.force-stash` marker so the stash is never empty; `dfm`
+detects "nothing to stash" directly and skips the pop.
+
+Then `install`, then run `post-pull.sh` from each package if present and
+executable, public first, with `cwd` set to the package. A non-zero hook exit
+is a fatal `hook_failed` error with the package name and exit code; the
+second hook still does not run (matches `set -e` in the script).
+
+Git operations shell out to `git`; no go-git. Exit 4 when git fails to reach
+the remote.
+
+### `dfm status`
+
+New, read-only. Report per-package: repo dirty or clean, ahead/behind the
+remote, and any `$HOME` conflicts or broken links the next `install` would hit.
+Zero side effects. This is the one addition to the surface in the first
+release because every other command needs the same planning code and it gives
+`--dry-run` a home.
+
+### `dfm version`
+
+Module version from build info, or the GoReleaser `ldflags` value when set.
+
+## Global flags
+
+- `--root <dir>` / `DFM_ROOT` (default `~/dotfiles`)
+- `--target <dir>` / `DFM_TARGET` (default `$HOME`)
+- `--dry-run` on every mutating command; prints the plan and exits 0
+- `--json` JSONL on stdout, one object per action, then `_meta`
+- `--verbose` echo every filesystem and git operation to stderr
+- `--quiet` suppress progress lines (errors still print)
+
+## Output
+
+Default (human) mode writes progress to stderr and nothing to stdout except
+what the wrapped commands print (`git status` in `pull`). `--json` mode:
+
+```
+$ dfm install --json
+{"action":"link","package":"public","path":".zshenv","target":"dotfiles/public/.zshenv"}
+{"action":"unlink","package":"private","path":".old-thing","reason":"source_missing"}
+{"action":"unfold","package":"public","path":".config"}
+{"_meta":{"has_more":false,"created":1,"removed":1,"unfolded":1,"refolded":0}}
+```
+
+Fatal errors are a single JSON object on stderr regardless of `--json`:
+
+```json
+{"error":"conflict","detail":".gitconfig exists and is not a dotfiles symlink","hint":"dfm public .gitconfig to adopt it, or remove it and rerun","path":".gitconfig"}
+```
+
+Conflicts are reported all at once, one line each, before exiting.
+
+### Exit codes
+
+- `0` success (including `--dry-run`)
+- `1` general error (bad arguments, `already_tracked`, `hook_failed`,
+  `bad_ignore_pattern`)
+- `2` conflict: a target path exists and is not ours; nothing was changed
+- `3` reserved (siblings use it for rate limits; kept for consistency)
+- `4` git or network error
+
+## Testing
+
+Every symlink test runs against a temp root and temp target, never `$HOME`.
+The parity suite builds a fixture tree, runs real `stow` (skipped when not on
+`PATH`) and `dfm` on copies, and diffs the resulting link trees. Fixture cases:
+single-package fold, two-package unfold, refold after removal, package-local
+symlink, ignore-list exclusion, conflict with a regular file, broken link
+cleanup.
+
+## Decisions
+
+- 2026-09-23: Repo is `tammersaleh/dotfiles-manager`, module
+  `github.com/tammersaleh/dotfiles-manager`, binary `dfm`. Public.
+- 2026-09-23: Verb-first command names kept from the bash script
+  (`install`, `public`, `private`, `ignore`, `pull`) for drop-in parity.
+- 2026-09-23: Stow is reimplemented, not shelled out to. `brew 'stow'` leaves
+  the Brewfile once `dfm install` is verified on this machine.
+- 2026-09-23: `public`/`private` drop the `$PWD == $HOME` requirement and
+  resolve paths instead.
+- 2026-09-23: `status` is the only new command in the first release.
+
+## Open questions
 
 Answer these in a fresh session before the first `feat:`. Each has the
 context needed to decide without re-reading the bash script.
