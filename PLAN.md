@@ -23,7 +23,7 @@ inline as work lands.
 
 Each entry is one sub-agent run and one release (or none for `chore:`).
 
-1. [ ] `feat: cli skeleton with version` - Kong root with global flags
+1. [x] `feat: cli skeleton with version` (pushed 1f952e9, 2026-09-23; 0.1.0 pending) - Kong root with global flags
    (`--root`, `--target`, `--dry-run`, `--json`, `--verbose`, `--quiet`,
    env `DFM_ROOT`/`DFM_TARGET`), `dfm version` from build info or ldflags,
    `internal/output` (human stderr progress, JSONL rows plus `_meta`
@@ -78,7 +78,17 @@ Give every feature agent:
 
 ## Discoveries
 
-(Append as they come. Date each.)
+- 2026-09-23: `mise run check` does not run `go mod tidy`; CI does. Run
+  `go mod tidy && git status --short` before committing a dependency change
+  and stage `go.sum` with `go.mod`.
+- 2026-09-23: dotfiles-public default branch is `master`, remote is SSH and
+  fingerprint-gated. Push with
+  `git push https://github.com/tammersaleh/dotfiles-public.git HEAD:master`.
+- 2026-09-23: `cmd.Run(args, stdout, stderr) int` is the in-process entry
+  point. `--root`/`--target` resolve lazily via `cli.RootDir()`/`TargetDir()`
+  so tests override with `t.Setenv("HOME", t.TempDir())`. Kong exit is
+  recovered via a panic sentinel. `output.Printer` has Progress, Verbosef,
+  Row, PrintMeta, Result, PrintError.
 
 ## Decisions made during implementation
 

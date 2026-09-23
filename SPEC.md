@@ -393,6 +393,11 @@ after this gate passes for the first release.
   stow leaves this machine; deleted once `dfm` intentionally deviates.
 - 2026-09-23: `fresh-install.sh` stays a shell script in the first release.
   `dfm bootstrap` is planned for a second release; see below.
+- 2026-09-23: Argument parse errors are fatal `invalid_arguments`, exit 1.
+- 2026-09-23: `--verbose` wins over `--quiet`. `--json` also suppresses
+  progress lines.
+- 2026-09-23: `dfm version` human output is the bare version on stdout;
+  `--json` gives `{"version":...}` then `_meta`.
 
 ## Planned: `dfm bootstrap`
 
