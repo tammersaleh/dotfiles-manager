@@ -99,6 +99,18 @@ refactor - follows the same workflow. No shortcuts for "small" fixes:
 Never ask permission to run this workflow. Committing, pushing to main, and
 waiting out the release are the documented process, not a decision point.
 
+### One sub-agent per feature
+
+Run each feature in its own sub-agent (`fork` when it needs the current
+conversation, otherwise `general-purpose`) to keep test output, diffs, and
+review transcripts out of the main thread's context. The sub-agent does steps
+1 through 7 end to end: SPEC read, branch, red-green-refactor, `mise run
+check`, commits, code review, merge, push. The main thread keeps the plan
+file current, reads the agent's report, does step 8 (install and verify) and
+step 9 (retrospective), then starts the next feature's agent. Give the agent
+the SPEC.md section, the plan file path, and the sibling-repo pointers up
+front so it starts cold without re-discovery.
+
 ## Bug reports and todos
 
 `bugs/` and `todo/` are ignored scratch space holding work orders, not
