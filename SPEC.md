@@ -474,6 +474,28 @@ after this gate passes for the first release.
   "file":"<pkg>/.gitignore","line"}` or `{"action":"noop",...,
   "reason":"already_ignored"}`; `_meta` gains `ignored`. Match is exact after
   trimming trailing whitespace; a missing trailing newline is added first.
+- 2026-09-24: `pull --dry-run` runs the dirty check (exit 1 `dirty_tree`
+  still applies), prints the fetch and rebase it would do per package, the
+  install plan against the current tree (files the pull would bring are not
+  in it; no virtual fs), and the hooks it would run. Fetches nothing.
+- 2026-09-24: `pull --json` rows: `{"action":"pull","package","before",
+  "after"}` per package (after null under dry-run), install rows,
+  `{"action":"hook","package","exit"}` or `{"action":"skip","package",
+  "reason":"absent"|"not_executable"|"no_hooks"}`, then `_meta` with
+  `pulled` and `hooks`. Rows stream as they happen; a mid-run fatal leaves
+  rows without `_meta`. `git status --short` output is dropped under
+  `--json`; hook stdout goes to stderr under `--json` and to stdout
+  otherwise.
+- 2026-09-24: `dirty_tree` detail names every dirty package with its change
+  count; `git_failed` detail is prefixed with the package. A rebase stopped
+  on a conflict is `git_failed` exit 4 with a `git rebase --abort` hint; the
+  second package is untouched.
+- 2026-09-24: Conflicts from the install inside `pull` add "the packages are
+  already updated; rerun dfm install after fixing" to every hint.
+  `hook_failed` (exit 1) is emitted after the hook row; its hint says the
+  same and mentions `--no-hooks`.
+- 2026-09-24: `git status --short` after a successful rebase of a clean tree
+  always prints nothing. Kept for parity; candidate to drop.
 
 ## Planned: `dfm bootstrap`
 

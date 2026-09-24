@@ -48,7 +48,7 @@ Each entry is one sub-agent run and one release (or none for `chore:`).
    `already_tracked`.
 5. [x] `feat: dfm ignore` (e68ca58, 2026-09-24; push pending SSH) - ownership via symlink chain, append `/<path>` to
    the owning package `.gitignore`, `not_tracked`, already-present no-op.
-6. [ ] `feat: dfm pull` - dirty check across both packages first, fetch and
+6. [x] `feat: dfm pull` (111ad4e, 2026-09-24; push pending SSH) - dirty check across both packages first, fetch and
    rebase per package, install, hooks with `cwd`, `--no-hooks`,
    `hook_failed`, exit 4 on git failure. Full layer 3 cases.
 7. [ ] Skill and README pass - `skills/dotfiles-manager/SKILL.md` and
@@ -128,6 +128,18 @@ Give every feature agent:
 - 2026-09-24: Shared path helpers live in `cmd/paths.go` (realDir, inside,
   linkOwner, linkDest). Lstat resolves intermediate symlink components, so
   an upward walk finds folded-dir owners without EvalSymlinks.
+- 2026-09-24: Kong subcommand flags (`--no-hooks`) must follow the command;
+  global flags may go either side.
+- 2026-09-24: `t.Setenv` does not reach exec'd binaries; built-binary tests
+  set HOME/XDG_CONFIG_HOME to temp dirs and GIT_CONFIG_GLOBAL=/dev/null in
+  `c.Env` themselves. `gittest.Isolate` also sets GIT_AUTHOR_*/GIT_COMMITTER_*.
+- 2026-09-24: `stowtest.NewLayout` nests root under target, so
+  `hashTree(target)` covers both packages' `.git` dirs.
+- 2026-09-24: Hook tests need `.stow-local-ignore` with `\.git` and
+  `post-pull\.sh` in both packages, as the real repos have, or both hooks
+  link to `~/post-pull.sh` and conflict.
+- 2026-09-24: `gitx.run` takes a readOnly flag; only queries get
+  GIT_OPTIONAL_LOCKS=0. `internal/hook` runs post-pull hooks.
 - 2026-09-23: `cmd.Run(args, stdout, stderr) int` is the in-process entry
   point. `--root`/`--target` resolve lazily via `cli.RootDir()`/`TargetDir()`
   so tests override with `t.Setenv("HOME", t.TempDir())`. Kong exit is
