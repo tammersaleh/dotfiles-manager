@@ -63,6 +63,8 @@ type Meta struct {
 	Refolded int  `json:"refolded,omitempty"`
 	Adopted  int  `json:"adopted,omitempty"` // public/private: paths moved into a package
 	Ignored  int  `json:"ignored,omitempty"` // ignore: lines appended to a .gitignore
+	Pulled   int  `json:"pulled,omitempty"`  // pull: packages fetched and rebased
+	Hooks    int  `json:"hooks,omitempty"`   // pull: post-pull.sh hooks run
 
 	// status counters
 	Dirty       int `json:"dirty,omitempty"`
