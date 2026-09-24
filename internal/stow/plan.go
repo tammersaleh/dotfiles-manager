@@ -44,16 +44,8 @@ func Restow(root, target string, packages []string) (plan *Plan, err error) {
 	if err != nil {
 		return nil, &output.Error{Err: "bad_layout", Detail: err.Error(), Path: root}
 	}
-	for _, pkg := range packages {
-		dir := filepath.Join(rootAbs, pkg)
-		if fi, statErr := os.Stat(dir); statErr != nil || !fi.IsDir() {
-			return nil, &output.Error{
-				Err:    "package_missing",
-				Detail: fmt.Sprintf("%s does not contain package %s", root, pkg),
-				Hint:   "clone the package repository into the root first",
-				Path:   dir,
-			}
-		}
+	if err := CheckPackages(root, rootAbs, packages); err != nil {
+		return nil, err
 	}
 
 	p := newPlanner(targetAbs, stowPath)
@@ -163,6 +155,23 @@ func (pl *Plan) Apply(trace func(string)) error {
 		if err != nil {
 			return &output.Error{Err: "apply_failed", Detail: err.Error(), Path: a.Path,
 				Hint: "the target tree is partially updated; rerun dfm install after fixing the cause"}
+		}
+	}
+	return nil
+}
+
+// CheckPackages returns package_missing unless every package is a directory
+// under rootAbs. root is the path as the user gave it, for the message.
+func CheckPackages(root, rootAbs string, packages []string) error {
+	for _, pkg := range packages {
+		dir := filepath.Join(rootAbs, pkg)
+		if fi, statErr := os.Stat(dir); statErr != nil || !fi.IsDir() {
+			return &output.Error{
+				Err:    "package_missing",
+				Detail: fmt.Sprintf("%s does not contain package %s", root, pkg),
+				Hint:   "clone the package repository into the root first",
+				Path:   dir,
+			}
 		}
 	}
 	return nil
