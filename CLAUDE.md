@@ -13,9 +13,9 @@ they do.
 
 ## Status
 
-v1.1.0 (2026-09-24): `dfm install` with stow parity (34 fixtures x 3
-drivers against stow 2.4.1), `dfm version`. `public`, `private`, `ignore`,
-`pull`, `status` are `not_implemented` stubs. `PLAN.md`
+v1.2.0 (2026-09-24): every command in SPEC.md implemented and verified on
+temp trees. The layer 4 release gate against the real `$HOME` has not run
+yet; stow stays in the Brewfile until it passes. `PLAN.md` tracks state. `PLAN.md`
 tracks feature order and discoveries; read it before starting work.
 
 ## The system being replaced
@@ -222,7 +222,9 @@ over SSH fails. Push over HTTPS with the gh credential helper (`gh auth
 setup-git` once, then `git push
 https://github.com/tammersaleh/dotfiles-manager.git main:main`). Exception:
 changes under `.github/workflows/` need a token with the `workflow` scope;
-push those over SSH with the fingerprint. Because release-please's merge
+push those over SSH with the fingerprint. From a Claude shell the SSH agent
+refuses to sign, so give Tammer the `! git -C <repo> push origin main` line
+and wait; stack work locally meanwhile. Because release-please's merge
 advances remote main, fetch and rebase over HTTPS before each subsequent push:
 
 ```bash

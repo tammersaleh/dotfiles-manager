@@ -40,15 +40,15 @@ Each entry is one sub-agent run and one release (or none for `chore:`).
    (skips unless `stow --version` is 2.4.1). Layer 2 behavioral tests for
    install. CI builds stow 2.4.1 from tarball. `testdata/real-shape` with
    `internal/tools/shapegen` (agent reviews the diff for leaks before commit).
-3. [x] `feat: dfm status` (3a0da55 plus fix 63b0f28, 2026-09-24; push pending SSH) - read-only: per-package dirty/clean, ahead/behind,
+3. [x] `feat: dfm status` (3a0da55 plus fix 63b0f28, 2026-09-24; released v1.2.0 2026-09-24) - read-only: per-package dirty/clean, ahead/behind,
    pending conflicts and broken links. Needs a minimal `internal/gitx`
    (status, rev-list). Layer 3 harness (bare remote in temp dir) starts here.
-4. [x] `feat: dfm public and private` (e6fec8a, 2026-09-24; push pending SSH) - adopt path into a package, then
+4. [x] `feat: dfm public and private` (e6fec8a, 2026-09-24; released v1.2.0 2026-09-24) - adopt path into a package, then
    install. Path resolution, inside-`$HOME` check, already-in-root refusal,
    `already_tracked`.
-5. [x] `feat: dfm ignore` (e68ca58, 2026-09-24; push pending SSH) - ownership via symlink chain, append `/<path>` to
+5. [x] `feat: dfm ignore` (e68ca58, 2026-09-24; released v1.2.0 2026-09-24) - ownership via symlink chain, append `/<path>` to
    the owning package `.gitignore`, `not_tracked`, already-present no-op.
-6. [x] `feat: dfm pull` (111ad4e, 2026-09-24; push pending SSH) - dirty check across both packages first, fetch and
+6. [x] `feat: dfm pull` (111ad4e, 2026-09-24; released v1.2.0 2026-09-24) - dirty check across both packages first, fetch and
    rebase per package, install, hooks with `cwd`, `--no-hooks`,
    `hook_failed`, exit 4 on git failure. Full layer 3 cases.
 7. [x] Skill and README pass (20b9048, 61fa7c8, 70f8768, 2026-09-24) - `skills/dotfiles-manager/SKILL.md` and
@@ -108,7 +108,12 @@ Give every feature agent:
 - 2026-09-24: 34 parity fixtures x 3 drivers (side-by-side, stow-then-dfm,
   dfm-then-stow) = 102 subtests against stow 2.4.1 locally.
 - 2026-09-24: `.github/workflows/` commits block an HTTPS push of everything
-  above them. Tammer pushes those over SSH.
+  above them. Tammer pushes those over SSH; from my shell the SSH agent
+  refuses to sign (`communication with agent failed`), so hand him the
+  `! git push origin main` line and wait. Features 3 through 7 stacked
+  locally behind one such commit; v1.2.0 shipped all of them at once.
+- 2026-09-24: v1.2.0 installed; every command exercised on a temp tree with
+  bare-repo remotes. Next is the layer 4 gate with Tammer.
 - 2026-09-24: `GIT_OPTIONAL_LOCKS=0` makes `git status` read-only (no index
   refresh write). `TestStatus_TreeUnchanged` hashes target and packages
   including `.git`.
