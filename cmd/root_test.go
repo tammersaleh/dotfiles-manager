@@ -56,7 +56,6 @@ func TestStubs_NotImplemented(t *testing.T) {
 		args    []string
 		command string // expected "dfm <command>" in detail
 	}{
-		{"ignore", []string{"ignore", ".examplerc"}, "ignore"},
 		{"pull", []string{"pull"}, "pull"},
 		{"pull --no-hooks", []string{"pull", "--no-hooks"}, "pull"},
 		{"pull --json", []string{"--json", "pull"}, "pull"},

@@ -48,17 +48,23 @@ func TestBinary_ExitCodes(t *testing.T) {
 		{"conflict", []string{"install"}, 2, "", "conflict"},
 		{"bad args", []string{"nope"}, 1, "", "invalid_arguments"},
 		{"adopt missing path", []string{"public", ".missing"}, 1, "", "not_found"},
+		{"ignore untracked", []string{"ignore", ".examplerc"}, 1, "", "not_tracked"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := exec.Command(bin, tt.args...)
 			// Keep the subprocess away from the real ~/dotfiles.
 			root, target := t.TempDir(), t.TempDir()
-			if tt.name == "conflict" || tt.name == "status not a repo" || tt.name == "adopt missing path" {
+			if tt.name == "conflict" || tt.name == "status not a repo" || tt.name == "adopt missing path" || tt.name == "ignore untracked" {
 				for _, pkg := range []string{"public", "private"} {
 					if err := os.MkdirAll(filepath.Join(root, pkg), 0o755); err != nil {
 						t.Fatal(err)
 					}
+				}
+			}
+			if tt.name == "ignore untracked" {
+				if err := os.WriteFile(filepath.Join(target, ".examplerc"), nil, 0o644); err != nil {
+					t.Fatal(err)
 				}
 			}
 			if tt.name == "conflict" {

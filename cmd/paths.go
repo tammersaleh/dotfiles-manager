@@ -30,21 +30,27 @@ func inside(path, dir string) bool {
 }
 
 // linkOwner returns the package a symlink at link points into, or "".
-// Relative link text is joined with the link's directory; absolute text is
+func linkOwner(link, rootAbs string) string {
+	_, pkg := linkDest(link, rootAbs)
+	return pkg
+}
+
+// linkDest returns the cleaned destination of the symlink at link and the
+// package it points into, or ("", "") when it is not dfm-owned. Relative link text is joined with the link's directory; absolute text is
 // taken as is. Neither is resolved further, matching stow's textual
 // ownership check.
-func linkOwner(link, rootAbs string) string {
+func linkDest(link, rootAbs string) (string, string) {
 	dest, err := os.Readlink(link)
 	if err != nil {
-		return ""
+		return "", ""
 	}
 	if !filepath.IsAbs(dest) {
 		dest = filepath.Join(filepath.Dir(link), dest)
 	}
 	dest = filepath.Clean(dest)
 	if !inside(dest, rootAbs) {
-		return ""
+		return "", ""
 	}
 	pkgRel, _ := filepath.Rel(rootAbs, dest)
-	return strings.SplitN(pkgRel, string(filepath.Separator), 2)[0]
+	return dest, strings.SplitN(pkgRel, string(filepath.Separator), 2)[0]
 }
