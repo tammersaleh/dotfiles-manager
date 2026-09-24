@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/tammersaleh/dotfiles-manager/internal/gitx"
@@ -170,5 +171,122 @@ func TestStatus_HonorsGlobalExcludes(t *testing.T) {
 	}
 	if st.Dirty {
 		t.Errorf("globally excluded file reported dirty: %+v", st)
+	}
+}
+
+// otherMachine clones remote elsewhere, commits content to path, and pushes.
+func otherMachine(t *testing.T, remote, path, content string) {
+	t.Helper()
+	other := filepath.Join(t.TempDir(), "other")
+	gittest.Clone(t, remote, other)
+	gittest.Commit(t, other, path, content, "elsewhere")
+	gittest.Push(t, other)
+}
+
+func TestFetchRebase(t *testing.T) {
+	dir, remote := seed(t)
+	before, err := gitx.HeadSHA(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(before) != 40 {
+		t.Fatalf("HeadSHA = %q", before)
+	}
+	otherMachine(t, remote, ".other", "a\n")
+
+	if err := gitx.Fetch(dir); err != nil {
+		t.Fatal(err)
+	}
+	mid, _ := gitx.HeadSHA(dir)
+	if mid != before {
+		t.Error("fetch moved HEAD")
+	}
+	if err := gitx.Rebase(dir, "FETCH_HEAD"); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := gitx.HeadSHA(dir)
+	if after == before {
+		t.Error("rebase did not move HEAD")
+	}
+	if after != gittest.Git(t, dir, "rev-parse", "origin/main") {
+		t.Error("HEAD is not at origin/main after rebase")
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".other")); err != nil {
+		t.Errorf("fetched file missing from the tree: %v", err)
+	}
+	st, _ := gitx.ShortStatus(dir)
+	if st != "" {
+		t.Errorf("short status after a clean rebase = %q, want empty", st)
+	}
+}
+
+func TestRebase_ReplaysLocalCommits(t *testing.T) {
+	dir, remote := seed(t)
+	gittest.Commit(t, dir, ".local", "mine\n", "local")
+	otherMachine(t, remote, ".other", "a\n")
+
+	if err := gitx.Fetch(dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := gitx.Rebase(dir, "FETCH_HEAD"); err != nil {
+		t.Fatal(err)
+	}
+	sync, err := gitx.AheadBehind(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sync.Ahead != 1 || sync.Behind != 0 {
+		t.Errorf("after rebase: %+v, want ahead 1 behind 0", sync)
+	}
+}
+
+func TestRebase_Conflict(t *testing.T) {
+	dir, remote := seed(t)
+	gittest.Commit(t, dir, ".examplerc", "mine\n", "local")
+	otherMachine(t, remote, ".examplerc", "theirs\n")
+
+	if err := gitx.Fetch(dir); err != nil {
+		t.Fatal(err)
+	}
+	err := gitx.Rebase(dir, "FETCH_HEAD")
+	var oErr *output.Error
+	if !errors.As(err, &oErr) || oErr.Err != "git_failed" || oErr.ExitCode() != output.ExitGit {
+		t.Fatalf("want git_failed exit 4, got %v", err)
+	}
+	if !strings.Contains(oErr.Hint, "git rebase --abort") || !strings.Contains(oErr.Hint, dir) {
+		t.Errorf("hint = %q, want the abort command and the dir", oErr.Hint)
+	}
+	if !strings.Contains(oErr.Detail, "git rebase") {
+		t.Errorf("detail = %q", oErr.Detail)
+	}
+	// Git is left mid-rebase; the abort in the hint works.
+	gittest.Git(t, dir, "rebase", "--abort")
+}
+
+func TestFetch_BadRemote(t *testing.T) {
+	dir, _ := seed(t)
+	gittest.Git(t, dir, "remote", "set-url", "origin", filepath.Join(t.TempDir(), "nope.git"))
+
+	err := gitx.Fetch(dir)
+	var oErr *output.Error
+	if !errors.As(err, &oErr) || oErr.Err != "git_failed" || oErr.ExitCode() != output.ExitGit {
+		t.Fatalf("want git_failed exit 4, got %v", err)
+	}
+	if !strings.Contains(oErr.Detail, "git fetch") {
+		t.Errorf("detail = %q should name the subcommand", oErr.Detail)
+	}
+}
+
+func TestShortStatus(t *testing.T) {
+	dir, _ := seed(t)
+	if err := os.WriteFile(filepath.Join(dir, "untracked"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := gitx.ShortStatus(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out != "?? untracked\n" {
+		t.Errorf("ShortStatus = %q", out)
 	}
 }

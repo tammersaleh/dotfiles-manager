@@ -1,10 +1,11 @@
 // Package gitx shells out to git for the package repositories. No go-git.
 // The user's gitconfig is honored, as the bash script's plain `git status`
 // did (a global core.excludesFile must hide the same files here). Every
-// process runs with GIT_TERMINAL_PROMPT=0 and GIT_OPTIONAL_LOCKS=0 so
-// read-only queries never prompt and never touch the index. Tests isolate
-// the config through the environment (gittest.Isolate). Failures are
-// *output.Error with code git_failed, exit 4.
+// process runs with GIT_TERMINAL_PROMPT=0 so nothing ever prompts; queries
+// additionally run with GIT_OPTIONAL_LOCKS=0 so they never touch the index,
+// while fetch and rebase get a normal environment because they write. Tests
+// isolate the config through the environment (gittest.Isolate). Failures
+// are *output.Error with code git_failed, exit 4.
 package gitx
 
 import (
@@ -13,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -37,7 +39,7 @@ type Sync struct {
 // Status runs `git status --porcelain --untracked-files` in dir. An
 // untracked file counts as dirty.
 func Status(dir string) (TreeStatus, error) {
-	out, err := run(dir, "status", "--porcelain", "--untracked-files")
+	out, err := query(dir, "status", "--porcelain", "--untracked-files")
 	if err != nil {
 		return TreeStatus{}, err
 	}
@@ -63,7 +65,7 @@ var noUpstreamMarkers = []string{
 // AheadBehind resolves the current branch's upstream and counts commits on
 // each side. No fetch: the numbers are against the local tracking ref.
 func AheadBehind(dir string) (Sync, error) {
-	upstream, err := run(dir, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+	upstream, err := query(dir, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
 	if err != nil {
 		var oErr *output.Error
 		if errors.As(err, &oErr) {
@@ -77,7 +79,7 @@ func AheadBehind(dir string) (Sync, error) {
 	}
 	upstream = strings.TrimSpace(upstream)
 
-	out, err := run(dir, "rev-list", "--left-right", "--count", "@{upstream}...HEAD")
+	out, err := query(dir, "rev-list", "--left-right", "--count", "@{upstream}...HEAD")
 	if err != nil {
 		return Sync{}, err
 	}
@@ -93,15 +95,75 @@ func AheadBehind(dir string) (Sync, error) {
 	return Sync{Upstream: upstream, Ahead: ahead, Behind: behind}, nil
 }
 
+// ShortStatus returns the raw `git status --short --untracked-files`
+// output, which pull echoes after each rebase.
+func ShortStatus(dir string) (string, error) {
+	return query(dir, "status", "--short", "--untracked-files")
+}
+
+// HeadSHA returns the full object name of HEAD.
+func HeadSHA(dir string) (string, error) {
+	out, err := query(dir, "rev-parse", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// Fetch runs `git fetch --all --quiet` in dir.
+func Fetch(dir string) error {
+	_, err := run(dir, false, "fetch", "--all", "--quiet")
+	return err
+}
+
+// Rebase runs `git rebase <onto> --quiet` in dir. When the rebase stops on
+// a conflict the returned error's hint says how to abort it; the repository
+// is left mid-rebase, exactly as git leaves it.
+func Rebase(dir, onto string) error {
+	_, err := run(dir, false, "rebase", onto, "--quiet")
+	if err == nil {
+		return nil
+	}
+	var oErr *output.Error
+	if errors.As(err, &oErr) && inRebase(dir) {
+		oErr.Hint = fmt.Sprintf("the rebase stopped on a conflict; run `git rebase --abort` in %s, resolve by hand, and rerun", dir)
+	}
+	return err
+}
+
+// inRebase reports whether dir has a rebase in progress.
+func inRebase(dir string) bool {
+	for _, state := range []string{"rebase-merge", "rebase-apply"} {
+		out, err := query(dir, "rev-parse", "--git-path", state)
+		if err != nil {
+			continue
+		}
+		path := strings.TrimSpace(out)
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(dir, path)
+		}
+		if _, err := os.Stat(path); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// query runs a read-only git command: GIT_OPTIONAL_LOCKS=0 keeps it from
+// refreshing the index or taking locks.
+func query(dir string, args ...string) (string, error) {
+	return run(dir, true, args...)
+}
+
 // run executes git with args in dir and returns stdout. A non-zero exit or
 // a failure to start git is a git_failed error carrying git's stderr.
-func run(dir string, args ...string) (string, error) {
+func run(dir string, readOnly bool, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
-		"GIT_TERMINAL_PROMPT=0",
-		"GIT_OPTIONAL_LOCKS=0",
-	)
+	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	if readOnly {
+		cmd.Env = append(cmd.Env, "GIT_OPTIONAL_LOCKS=0")
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

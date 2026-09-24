@@ -14,8 +14,9 @@ import (
 
 // Isolate points HOME and XDG_CONFIG_HOME at temp dirs for the rest of the
 // test so neither the real gitconfig nor the real global excludes file can
-// leak into git invocations made by the code under test. Incompatible with
-// t.Parallel.
+// leak into git invocations made by the code under test, and gives those
+// invocations a fixed author so a rebase that replays commits has an
+// identity. Incompatible with t.Parallel.
 func Isolate(t *testing.T) {
 	t.Helper()
 	home := t.TempDir()
@@ -24,6 +25,10 @@ func Isolate(t *testing.T) {
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
 	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 	t.Setenv("GIT_TERMINAL_PROMPT", "0")
+	t.Setenv("GIT_AUTHOR_NAME", "alice")
+	t.Setenv("GIT_AUTHOR_EMAIL", "alice@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "alice")
+	t.Setenv("GIT_COMMITTER_EMAIL", "alice@example.com")
 }
 
 // Env is the environment for every git process the harness runs: hermetic
