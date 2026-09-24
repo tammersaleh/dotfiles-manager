@@ -75,7 +75,17 @@ func TestBinary_ExitCodes(t *testing.T) {
 					}
 				}
 			}
-			c.Env = append(os.Environ(), "DFM_ROOT="+root, "DFM_TARGET="+target)
+			// The binary's git subprocesses must never read the real
+			// gitconfig: t.Setenv does not reach a child process, so
+			// isolate HOME and the config here, as gittest.Isolate does.
+			c.Env = append(os.Environ(),
+				"DFM_ROOT="+root, "DFM_TARGET="+target,
+				"HOME="+t.TempDir(),
+				"XDG_CONFIG_HOME="+filepath.Join(t.TempDir(), ".config"),
+				"GIT_CONFIG_GLOBAL=/dev/null",
+				"GIT_CONFIG_NOSYSTEM=1",
+				"GIT_TERMINAL_PROMPT=0",
+			)
 			var stderr strings.Builder
 			c.Stderr = &stderr
 			stdout, err := c.Output()
