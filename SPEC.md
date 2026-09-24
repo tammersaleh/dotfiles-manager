@@ -115,7 +115,7 @@ part of unstow; this is how a removed dotfile disappears from `$HOME` on
 ### Relative link targets
 
 Links are relative, computed from the link's directory to the package file:
-`~/.config/nvim/init.lua -> ../../../dotfiles/public/.config/nvim/init.lua`.
+`~/.config/nvim/init.lua -> ../../dotfiles/public/.config/nvim/init.lua`.
 
 ## Commands
 
