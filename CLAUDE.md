@@ -13,8 +13,9 @@ they do.
 
 ## Status
 
-v1.0.0 (2026-09-23): CLI skeleton, global flags, `dfm version`,
-`internal/output`. Every other command is a `not_implemented` stub. `PLAN.md`
+v1.1.0 (2026-09-24): `dfm install` with stow parity (34 fixtures x 3
+drivers against stow 2.4.1), `dfm version`. `public`, `private`, `ignore`,
+`pull`, `status` are `not_implemented` stubs. `PLAN.md`
 tracks feature order and discoveries; read it before starting work.
 
 ## The system being replaced
@@ -200,6 +201,12 @@ shells out to real `stow` when it is on `PATH` and skips otherwise, so CI
 (ubuntu, no stow) runs the pure-Go cases and the local machine runs parity.
 Git tests use a bare repo in a temp dir as the remote; nothing touches
 GitHub. Never read or write the real `$HOME` or `~/dotfiles` in a test.
+
+Every `cmd` test that invokes a command MUST set `--root` and `--target` (or
+`DFM_ROOT`/`DFM_TARGET`) to temp dirs, including tests of stubs and error
+paths. A stub test without them ran `dfm install` against the real `$HOME`
+the first time the command existed (2026-09-24; zero actions, but the rule
+exists because of it).
 
 golangci-lint is v2. `errcheck` is disabled for `_test.go` only
 (`.golangci.yml`). gopls "modernize" hints are not part of the gate.

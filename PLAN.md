@@ -32,7 +32,7 @@ Each entry is one sub-agent run and one release (or none for `chore:`).
    Adds `cask 'tammersaleh/tap/dotfiles-manager'` to
    `~/dotfiles/public/packages/Brewfile` (commit and push that dotfiles
    change too). Cuts 0.1.0.
-2. [ ] `feat: dfm install` - `internal/stow`: ignore lists (Perl to RE2,
+2. [x] `feat: dfm install` (eafb2f4, released v1.1.0 2026-09-24; ci commit c4fe0d3 awaits SSH push) - `internal/stow`: ignore lists (Perl to RE2,
    stow default list, `bad_ignore_pattern`), planner (fold, unfold, refold,
    dangling-link removal, relative link text, package symlinks as files),
    conflict detection (exit 2, all conflicts reported, nothing changed),
@@ -93,6 +93,22 @@ Give every feature agent:
 - 2026-09-23: GoReleaser's cask template emits a deprecated `postflight`
   block (Homebrew warns, install still works). Same in the siblings; fix
   belongs in the GoReleaser upgrade, not here.
+- 2026-09-24: INCIDENT. `TestStubs_NotImplemented` ran `install` with no
+  `--root`, so the first `go test ./cmd` after the command existed ran
+  `dfm install` against the real `$HOME`. Zero actions, nothing changed.
+  Fixed; rule added to CLAUDE.md Testing.
+- 2026-09-24: `testdata/real-shape/` is a manifest (`manifest.tsv` plus
+  per-package ignore lists), not a tree, so empty dirs and exec bits survive
+  git. Regenerate with `go run ./internal/tools/shapegen`.
+- 2026-09-24: Both real packages contain absolute symlinks. Stow tolerates
+  them only because their parent dirs stay folded; a future overlap in those
+  dirs surfaces as absolute-symlink conflicts.
+- 2026-09-24: Parity tests run stow and dfm in goroutines; helpers return
+  errors rather than take `*testing.T`. `sync.WaitGroup`, no errgroup.
+- 2026-09-24: 34 parity fixtures x 3 drivers (side-by-side, stow-then-dfm,
+  dfm-then-stow) = 102 subtests against stow 2.4.1 locally.
+- 2026-09-24: `.github/workflows/` commits block an HTTPS push of everything
+  above them. Tammer pushes those over SSH.
 - 2026-09-23: `cmd.Run(args, stdout, stderr) int` is the in-process entry
   point. `--root`/`--target` resolve lazily via `cli.RootDir()`/`TargetDir()`
   so tests override with `t.Setenv("HOME", t.TempDir())`. Kong exit is

@@ -398,6 +398,29 @@ after this gate passes for the first release.
   progress lines.
 - 2026-09-23: `dfm version` human output is the bare version on stdout;
   `--json` gives `{"version":...}` then `_meta`.
+- 2026-09-23: Stow 2.4.1 `--restow` dies (`unstow_contents() called with
+  invalid target`, exit 2, nothing changed) when a second package newly
+  contributes to a directory the first has folded. `dfm` unfolds instead.
+  Parity fixtures mark those steps as stow-dies and recover stow with a
+  plain `stow`.
+- 2026-09-23: Stow dies when the target has a real directory where the
+  package has a file. `dfm` reports a conflict, exit 2.
+- 2026-09-23: Refold never happens under restow of both packages: unstow of
+  X folds only when every remaining link is Y's, and X's stow phase unfolds
+  again. A directory that was unfolded stays a real directory. `dfm` matches
+  stow; the refold path exists but is a no-op in restow.
+- 2026-09-23: A fresh two-package install reports every shared directory as
+  unfolded (public folds, private unfolds in the same plan). Accurate.
+- 2026-09-23: Ownership is stow's textual check: link text joined with the
+  link's directory has prefix `<root>/`. An absolute symlink into the root is
+  a conflict on stow and ignored on unstow. Not "resolved target inside
+  root" as written above.
+- 2026-09-23: Dangling links inside a directory the package no longer has at
+  all are never cleaned; stow only visits target directories that exist in
+  the package.
+- 2026-09-23: Link text is one `..` per level below the target:
+  `~/.config/nvim/init.lua -> ../../dotfiles/public/.config/nvim/init.lua`.
+  The example under "Relative link targets" has one `..` too many.
 
 ## Planned: `dfm bootstrap`
 
