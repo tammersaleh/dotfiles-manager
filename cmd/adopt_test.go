@@ -71,9 +71,13 @@ func TestAdopt_File(t *testing.T) {
 			if err != nil || string(b) != "mine" {
 				t.Errorf("package file: %q, %v", b, err)
 			}
-			// Idempotent: a second install does nothing.
-			if code, _, errW := runInstall(t, l, "--json"); code != 0 || strings.Contains(errW, "error") {
-				t.Errorf("install after adopt: exit %d %s", code, errW)
+			// Idempotent: a second install plans zero actions.
+			code, out, errW = runInstall(t, l, "--json")
+			if code != 0 {
+				t.Fatalf("install after adopt: exit %d %s", code, errW)
+			}
+			if rows, meta := jsonRows(t, out); len(rows) != 0 || len(meta) != 1 {
+				t.Errorf("second install not idempotent: rows=%v meta=%v", rows, meta)
 			}
 		})
 	}
