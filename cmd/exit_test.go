@@ -47,13 +47,14 @@ func TestBinary_ExitCodes(t *testing.T) {
 		{"install empty root", []string{"install"}, 1, "", "package_missing"},
 		{"conflict", []string{"install"}, 2, "", "conflict"},
 		{"bad args", []string{"nope"}, 1, "", "invalid_arguments"},
+		{"adopt missing path", []string{"public", ".missing"}, 1, "", "not_found"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := exec.Command(bin, tt.args...)
 			// Keep the subprocess away from the real ~/dotfiles.
 			root, target := t.TempDir(), t.TempDir()
-			if tt.name == "conflict" || tt.name == "status not a repo" {
+			if tt.name == "conflict" || tt.name == "status not a repo" || tt.name == "adopt missing path" {
 				for _, pkg := range []string{"public", "private"} {
 					if err := os.MkdirAll(filepath.Join(root, pkg), 0o755); err != nil {
 						t.Fatal(err)

@@ -61,6 +61,7 @@ type Meta struct {
 	Removed  int  `json:"removed,omitempty"`
 	Unfolded int  `json:"unfolded,omitempty"`
 	Refolded int  `json:"refolded,omitempty"`
+	Adopted  int  `json:"adopted,omitempty"` // public/private: paths moved into a package
 
 	// status counters
 	Dirty       int `json:"dirty,omitempty"`
