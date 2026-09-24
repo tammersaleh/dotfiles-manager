@@ -19,29 +19,35 @@ func (c *InstallCmd) Run(cli *CLI) error {
 		return err
 	}
 	p := cli.Printer()
-
-	plan, err := stow.Restow(root, target, stow.Packages)
+	meta, err := install(cli, p, root, target)
 	if err != nil {
 		return err
 	}
+	return p.PrintMeta(meta)
+}
+
+// install plans and applies the restow, printing every action and the
+// summary line, and returns the counters for the caller's _meta trailer.
+// Conflicts are printed one per line and returned as output.Reported with
+// exit 2. Under --dry-run nothing is applied.
+func install(cli *CLI, p *output.Printer, root, target string) (output.Meta, error) {
+	plan, err := stow.Restow(root, target, stow.Packages)
+	if err != nil {
+		return output.Meta{}, err
+	}
 	if len(plan.Conflicts) > 0 {
-		for _, cf := range plan.Conflicts {
-			if err := p.PrintError(&output.Error{Err: "conflict", Detail: cf.Detail, Hint: cf.Hint, Path: cf.Path}); err != nil {
-				return err
-			}
-		}
-		return &output.Reported{Code: output.ExitConflict}
+		return output.Meta{}, reportConflicts(p, plan)
 	}
 
 	for _, a := range plan.Actions {
 		p.Progress("%s", describe(a))
 		if err := p.Row(a); err != nil {
-			return err
+			return output.Meta{}, err
 		}
 	}
 	if !cli.DryRun {
 		if err := plan.Apply(func(op string) { p.Verbosef("%s", op) }); err != nil {
-			return err
+			return output.Meta{}, err
 		}
 	}
 
@@ -55,7 +61,18 @@ func (c *InstallCmd) Run(cli *CLI) error {
 	default:
 		p.Progress("created %d, removed %d, unfolded %d, refolded %d", m.Created, m.Removed, m.Unfolded, m.Refolded)
 	}
-	return p.PrintMeta(m)
+	return m, nil
+}
+
+// reportConflicts prints one error line per conflict and returns the
+// exit-2 sentinel.
+func reportConflicts(p *output.Printer, plan *stow.Plan) error {
+	for _, cf := range plan.Conflicts {
+		if err := p.PrintError(&output.Error{Err: "conflict", Detail: cf.Detail, Hint: cf.Hint, Path: cf.Path}); err != nil {
+			return err
+		}
+	}
+	return &output.Reported{Code: output.ExitConflict}
 }
 
 // describe is the human progress line for one action.
