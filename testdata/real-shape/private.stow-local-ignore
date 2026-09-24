@@ -1,0 +1,8 @@
+\.gitattributes
+\.gitignore
+\.git
+tags.*
+.*\.swp
+\.envrc
+README\.md
+CLAUDE\.md

@@ -1,0 +1,11 @@
+\.gitattributes
+\.gitignore
+\.git
+tags.*
+.*\.swp
+\.envrc
+README\.md
+CLAUDE\.md
+post-pull\.sh
+fresh-install\.sh
+\.claude/settings\.local\.json
