@@ -421,6 +421,28 @@ after this gate passes for the first release.
 - 2026-09-23: Link text is one `..` per level below the target:
   `~/.config/nvim/init.lua -> ../../dotfiles/public/.config/nvim/init.lua`.
   The example under "Relative link targets" has one `..` too many.
+- 2026-09-24: `status` exits 2 when any conflict exists (as `install`
+  would), 4 on `git_failed`, 1 on `package_missing`, else 0. Dirty, ahead,
+  behind, broken links, no upstream, and detached HEAD are states, not
+  errors.
+- 2026-09-24: `status` never fetches. Ahead/behind is against the local
+  tracking ref. `pull` owns the network.
+- 2026-09-24: `status --json` rows: `{"kind":"package","package","dirty",
+  "changes","upstream","ahead","behind"}` (upstream/ahead/behind null with no
+  upstream), `{"kind":"conflict","package","path","detail","hint"}`,
+  `{"kind":"broken_link","package","path","target"}`, then `_meta` with
+  `dirty`, `conflicts`, `broken_links`, `pending` (omitted when zero).
+  `pending` counts every planned install action. Rows are buffered so a git
+  failure leaves stdout empty.
+- 2026-09-24: `status` human output goes to stdout (it is the result), one
+  line per package, then conflicts, broken links, and a one-line install
+  summary. `--quiet` does not suppress it.
+- 2026-09-24: `gitx` inherits the user's gitconfig in production (so
+  `core.excludesFile` is honored and globally ignored files are not dirty)
+  and sets only `GIT_TERMINAL_PROMPT=0` and `GIT_OPTIONAL_LOCKS=0`. Tests
+  isolate via `gittest.Isolate`.
+- 2026-09-24: `changes` is the porcelain line count with
+  `--untracked-files=all`, one line per file.
 
 ## Planned: `dfm bootstrap`
 

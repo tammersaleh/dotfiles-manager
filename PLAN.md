@@ -40,7 +40,7 @@ Each entry is one sub-agent run and one release (or none for `chore:`).
    (skips unless `stow --version` is 2.4.1). Layer 2 behavioral tests for
    install. CI builds stow 2.4.1 from tarball. `testdata/real-shape` with
    `internal/tools/shapegen` (agent reviews the diff for leaks before commit).
-3. [ ] `feat: dfm status` - read-only: per-package dirty/clean, ahead/behind,
+3. [x] `feat: dfm status` (3a0da55 plus fix 63b0f28, 2026-09-24; push pending SSH) - read-only: per-package dirty/clean, ahead/behind,
    pending conflicts and broken links. Needs a minimal `internal/gitx`
    (status, rev-list). Layer 3 harness (bare remote in temp dir) starts here.
 4. [ ] `feat: dfm public and private` - adopt path into a package, then
@@ -109,6 +109,16 @@ Give every feature agent:
   dfm-then-stow) = 102 subtests against stow 2.4.1 locally.
 - 2026-09-24: `.github/workflows/` commits block an HTTPS push of everything
   above them. Tammer pushes those over SSH.
+- 2026-09-24: `GIT_OPTIONAL_LOCKS=0` makes `git status` read-only (no index
+  refresh write). `TestStatus_TreeUnchanged` hashes target and packages
+  including `.git`.
+- 2026-09-24: `gittest.Isolate` uses `t.Setenv`, so git-backed tests cannot
+  `t.Parallel`. Install fixtures still do.
+- 2026-09-24: `git init --bare -b main` plus `push -u origin main` gives the
+  test clone a predictable `origin/main` upstream.
+- 2026-09-24: `~/dotfiles/public/.gitconfig` sets `core.excludesFile`;
+  hiding the global gitconfig would make `status` call ignored files dirty
+  and `pull` refuse. Hence gitx inherits gitconfig.
 - 2026-09-23: `cmd.Run(args, stdout, stderr) int` is the in-process entry
   point. `--root`/`--target` resolve lazily via `cli.RootDir()`/`TargetDir()`
   so tests override with `t.Setenv("HOME", t.TempDir())`. Kong exit is
