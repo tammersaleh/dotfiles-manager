@@ -100,7 +100,7 @@ func adopt(cli *CLI, pkg, arg string) error {
 		return err
 	}
 	if len(plan.Conflicts) > 0 {
-		return reportConflicts(p, plan)
+		return reportConflicts(p, plan, "")
 	}
 
 	p.Progress("moving %s to %s", rel, pkg)

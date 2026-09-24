@@ -142,14 +142,3 @@ func fail(cli *CLI, e *output.Error) int {
 	}
 	return e.ExitCode()
 }
-
-// notImplemented is the fatal error every stub returns until its feature
-// lands. Kept in one place so the code and hint stay identical.
-func notImplemented(command string) error {
-	return &output.Error{
-		Err:    "not_implemented",
-		Detail: fmt.Sprintf("dfm %s is not implemented yet", command),
-		Hint:   "see https://github.com/tammersaleh/dotfiles-manager/blob/main/SPEC.md",
-		Code:   output.ExitGeneral,
-	}
-}

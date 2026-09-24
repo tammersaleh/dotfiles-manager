@@ -42,7 +42,8 @@ func TestBinary_ExitCodes(t *testing.T) {
 		wantErr    string // error code in the stderr JSON, empty for none
 	}{
 		{"version", []string{"version"}, 0, "9.8.7\n", ""},
-		{"stub", []string{"pull"}, 1, "", "not_implemented"},
+		{"pull empty root", []string{"pull"}, 1, "", "package_missing"},
+		{"pull not a repo", []string{"pull"}, 4, "", "git_failed"},
 		{"status not a repo", []string{"status"}, 4, "", "git_failed"},
 		{"install empty root", []string{"install"}, 1, "", "package_missing"},
 		{"conflict", []string{"install"}, 2, "", "conflict"},
@@ -55,7 +56,7 @@ func TestBinary_ExitCodes(t *testing.T) {
 			c := exec.Command(bin, tt.args...)
 			// Keep the subprocess away from the real ~/dotfiles.
 			root, target := t.TempDir(), t.TempDir()
-			if tt.name == "conflict" || tt.name == "status not a repo" || tt.name == "adopt missing path" || tt.name == "ignore untracked" {
+			if tt.name == "conflict" || tt.name == "status not a repo" || tt.name == "pull not a repo" || tt.name == "adopt missing path" || tt.name == "ignore untracked" {
 				for _, pkg := range []string{"public", "private"} {
 					if err := os.MkdirAll(filepath.Join(root, pkg), 0o755); err != nil {
 						t.Fatal(err)

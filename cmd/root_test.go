@@ -47,43 +47,6 @@ func mustParse(t *testing.T, args ...string) *cmd.CLI {
 	return &cli
 }
 
-func TestStubs_NotImplemented(t *testing.T) {
-	// Never let a stub that grows up run against the real ~/dotfiles.
-	t.Setenv("DFM_ROOT", t.TempDir())
-	t.Setenv("DFM_TARGET", t.TempDir())
-	tests := []struct {
-		name    string
-		args    []string
-		command string // expected "dfm <command>" in detail
-	}{
-		{"pull", []string{"pull"}, "pull"},
-		{"pull --no-hooks", []string{"pull", "--no-hooks"}, "pull"},
-		{"pull --json", []string{"--json", "pull"}, "pull"},
-		{"pull --quiet", []string{"--quiet", "pull"}, "pull"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			code, out, errW := run(t, tt.args...)
-			if code != 1 {
-				t.Errorf("exit = %d, want 1", code)
-			}
-			if out != "" {
-				t.Errorf("stdout should be empty, got %q", out)
-			}
-			m := oneJSONObject(t, errW)
-			if m["error"] != "not_implemented" {
-				t.Errorf("error = %v, want not_implemented", m["error"])
-			}
-			if d, _ := m["detail"].(string); !strings.Contains(d, "dfm "+tt.command) {
-				t.Errorf("detail = %q should name 'dfm %s'", d, tt.command)
-			}
-			if h, _ := m["hint"].(string); h == "" {
-				t.Error("hint should be present")
-			}
-		})
-	}
-}
-
 func TestInvalidArguments(t *testing.T) {
 	tests := []struct {
 		name string

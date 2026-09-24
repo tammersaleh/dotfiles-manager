@@ -31,12 +31,19 @@ func (c *InstallCmd) Run(cli *CLI) error {
 // Conflicts are printed one per line and returned as output.Reported with
 // exit 2. Under --dry-run nothing is applied.
 func install(cli *CLI, p *output.Printer, root, target string) (output.Meta, error) {
+	return installWith(cli, p, root, target, "")
+}
+
+// installWith is install with an extra sentence appended to every conflict
+// hint, for callers whose earlier steps have already changed something
+// (pull: the repositories are updated by the time install runs).
+func installWith(cli *CLI, p *output.Printer, root, target, conflictNote string) (output.Meta, error) {
 	plan, err := stow.Restow(root, target, stow.Packages)
 	if err != nil {
 		return output.Meta{}, err
 	}
 	if len(plan.Conflicts) > 0 {
-		return output.Meta{}, reportConflicts(p, plan)
+		return output.Meta{}, reportConflicts(p, plan, conflictNote)
 	}
 
 	for _, a := range plan.Actions {
@@ -65,10 +72,14 @@ func install(cli *CLI, p *output.Printer, root, target string) (output.Meta, err
 }
 
 // reportConflicts prints one error line per conflict and returns the
-// exit-2 sentinel.
-func reportConflicts(p *output.Printer, plan *stow.Plan) error {
+// exit-2 sentinel. A non-empty note is appended to each hint.
+func reportConflicts(p *output.Printer, plan *stow.Plan, note string) error {
 	for _, cf := range plan.Conflicts {
-		if err := p.PrintError(&output.Error{Err: "conflict", Detail: cf.Detail, Hint: cf.Hint, Path: cf.Path}); err != nil {
+		hint := cf.Hint
+		if note != "" {
+			hint += "; " + note
+		}
+		if err := p.PrintError(&output.Error{Err: "conflict", Detail: cf.Detail, Hint: hint, Path: cf.Path}); err != nil {
 			return err
 		}
 	}
