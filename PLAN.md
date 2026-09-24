@@ -46,7 +46,7 @@ Each entry is one sub-agent run and one release (or none for `chore:`).
 4. [x] `feat: dfm public and private` (e6fec8a, 2026-09-24; push pending SSH) - adopt path into a package, then
    install. Path resolution, inside-`$HOME` check, already-in-root refusal,
    `already_tracked`.
-5. [ ] `feat: dfm ignore` - ownership via symlink chain, append `/<path>` to
+5. [x] `feat: dfm ignore` (e68ca58, 2026-09-24; push pending SSH) - ownership via symlink chain, append `/<path>` to
    the owning package `.gitignore`, `not_tracked`, already-present no-op.
 6. [ ] `feat: dfm pull` - dirty check across both packages first, fetch and
    rebase per package, install, hooks with `cwd`, `--no-hooks`,
@@ -125,6 +125,9 @@ Give every feature agent:
 - 2026-09-24: The planner has no virtual fs view. Anything that needs "plan
   as if X changed" (adopt or pull `--dry-run`) needs an fs interface in
   `internal/stow` first.
+- 2026-09-24: Shared path helpers live in `cmd/paths.go` (realDir, inside,
+  linkOwner, linkDest). Lstat resolves intermediate symlink components, so
+  an upward walk finds folded-dir owners without EvalSymlinks.
 - 2026-09-23: `cmd.Run(args, stdout, stderr) int` is the in-process entry
   point. `--root`/`--target` resolve lazily via `cli.RootDir()`/`TargetDir()`
   so tests override with `t.Setenv("HOME", t.TempDir())`. Kong exit is

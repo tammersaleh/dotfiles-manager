@@ -461,6 +461,19 @@ after this gate passes for the first release.
 - 2026-09-24: Adopting a path the package ignore list matches (e.g.
   `.gitignore`) moves it and install then never links it, exit 0, silent.
   Open: an `ignored_by_package` error is a candidate `fix:`.
+- 2026-09-24: `ignore` error codes, exit 1: `not_tracked`, `not_found`
+  (path missing, including a missing leaf under a folded dir link),
+  `outside_target` (under neither target nor root), `ignore_failed`.
+- 2026-09-24: `ignore` accepts a path inside the root (`~/dotfiles/public/x`)
+  and treats the first component as the owning package. Adopt rejects the
+  same path as `inside_root`.
+- 2026-09-24: `ignore` ownership walks upward from the path to the first
+  component that is a dfm-owned link (stow textual check; an absolute link
+  into the root also counts). Does not run install afterward.
+- 2026-09-24: `ignore --json` row is `{"action":"ignore","package","path",
+  "file":"<pkg>/.gitignore","line"}` or `{"action":"noop",...,
+  "reason":"already_ignored"}`; `_meta` gains `ignored`. Match is exact after
+  trimming trailing whitespace; a missing trailing newline is added first.
 
 ## Planned: `dfm bootstrap`
 
