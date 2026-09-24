@@ -43,7 +43,7 @@ Each entry is one sub-agent run and one release (or none for `chore:`).
 3. [x] `feat: dfm status` (3a0da55 plus fix 63b0f28, 2026-09-24; push pending SSH) - read-only: per-package dirty/clean, ahead/behind,
    pending conflicts and broken links. Needs a minimal `internal/gitx`
    (status, rev-list). Layer 3 harness (bare remote in temp dir) starts here.
-4. [ ] `feat: dfm public and private` - adopt path into a package, then
+4. [x] `feat: dfm public and private` (e6fec8a, 2026-09-24; push pending SSH) - adopt path into a package, then
    install. Path resolution, inside-`$HOME` check, already-in-root refusal,
    `already_tracked`.
 5. [ ] `feat: dfm ignore` - ownership via symlink chain, append `/<path>` to
@@ -119,6 +119,12 @@ Give every feature agent:
 - 2026-09-24: `~/dotfiles/public/.gitconfig` sets `core.excludesFile`;
   hiding the global gitconfig would make `status` call ignored files dirty
   and `pull` refuse. Hence gitx inherits gitconfig.
+- 2026-09-24: `cmd/install.go` exposes `install(cli, p, root, target)` and
+  `reportConflicts()`; every command that ends in install calls it. Planning
+  install before a mutation is how "conflicts elsewhere, move nothing" works.
+- 2026-09-24: The planner has no virtual fs view. Anything that needs "plan
+  as if X changed" (adopt or pull `--dry-run`) needs an fs interface in
+  `internal/stow` first.
 - 2026-09-23: `cmd.Run(args, stdout, stderr) int` is the in-process entry
   point. `--root`/`--target` resolve lazily via `cli.RootDir()`/`TargetDir()`
   so tests override with `t.Setenv("HOME", t.TempDir())`. Kong exit is

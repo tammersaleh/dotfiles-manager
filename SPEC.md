@@ -443,6 +443,24 @@ after this gate passes for the first release.
   isolate via `gittest.Isolate`.
 - 2026-09-24: `changes` is the porcelain line count with
   `--untracked-files=all`, one line per file.
+- 2026-09-24: `public`/`private` error codes, exit 1: `outside_target`,
+  `inside_root`, `not_found`, `already_tracked` (destination exists, or the
+  source is already a dfm-owned link), `contains_tracked` (a directory
+  holding a dfm-owned link anywhere below it; adopt the children instead),
+  `cross_device`, `adopt_failed`. Install is planned on the current tree
+  before the move; any conflict exits 2 and nothing moves.
+- 2026-09-24: Path resolution for adopt: relative joins the target;
+  `EvalSymlinks` on the parent only, so a symlink leaf is adopted as a link
+  and a path under a folded dir link resolves into the root (`inside_root`).
+- 2026-09-24: adopt `--json` row is `{"action":"adopt","package","path",
+  "from","to"}` with `to` root-relative (`private/.config/example`). `_meta`
+  gains `adopted`.
+- 2026-09-24: adopt `--dry-run` prints the move but not the install plan
+  that follows; the planner reads the real filesystem and has no virtual
+  view. Revisit if `pull --dry-run` needs one.
+- 2026-09-24: Adopting a path the package ignore list matches (e.g.
+  `.gitignore`) moves it and install then never links it, exit 0, silent.
+  Open: an `ignored_by_package` error is a candidate `fix:`.
 
 ## Planned: `dfm bootstrap`
 
