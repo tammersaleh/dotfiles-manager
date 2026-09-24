@@ -53,7 +53,7 @@ Each entry is one sub-agent run and one release (or none for `chore:`).
    `hook_failed`, exit 4 on git failure. Full layer 3 cases.
 7. [x] Skill and README pass (20b9048, 61fa7c8, 70f8768, 2026-09-24) - `skills/dotfiles-manager/SKILL.md` and
    `README.md` describe the real surface. `docs:`, no release.
-8. [ ] Layer 4 release gate, by hand, WITH TAMMER. Snapshot, `dfm install
+8. [x] Layer 4 release gate, by hand, WITH TAMMER. PASSED 2026-09-24 on v1.2.0: 127 links, dry-run zero actions, install zero actions, before/after diff identical. Brewfile stow line removed and `alias dotfiles=dfm` added (dotfiles-public a66d091). Snapshot, `dfm install
    --dry-run` expecting zero actions, `dfm status`, `dfm install`, diff.
    Only after this: remove `brew 'stow'` from the Brewfile and add
    `alias dotfiles=dfm`.

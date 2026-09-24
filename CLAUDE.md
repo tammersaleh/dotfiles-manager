@@ -13,9 +13,13 @@ they do.
 
 ## Status
 
-v1.2.0 (2026-09-24): every command in SPEC.md implemented and verified on
-temp trees. The layer 4 release gate against the real `$HOME` has not run
-yet; stow stays in the Brewfile until it passes. `PLAN.md` tracks state. `PLAN.md`
+v1.2.0 (2026-09-24): every command in SPEC.md implemented. Layer 4 gate
+passed on this machine (127 links, zero actions, identical tree). Stow is
+out of the Brewfile and `alias dotfiles=dfm` is live. `dfm` now manages the
+real `~/dotfiles`; the "never test against real `$HOME`" rule still holds
+for tests and development builds. Next: `dfm bootstrap` (SPEC.md
+"Planned"), plus the open items in SPEC.md Decisions and `todo/`.
+`PLAN.md` tracks state. `PLAN.md`
 tracks feature order and discoveries; read it before starting work.
 
 ## The system being replaced
@@ -178,9 +182,9 @@ upgrades an already-installed package; the very first install was
 Release-please cut the first release as 1.0.0 (manifest scaffolded at 0.0.0,
 `feat:` bumps major pre-1.0). Not a bug.
 
-Chicken-and-egg: `dfm` will one day remove `brew 'stow'` from the Brewfile,
-and `~/packages/go` runs from a stowed symlink. Keep stow in the Brewfile
-until `dfm install` has run cleanly on this machine at least once.
+`brew 'stow'` left the Brewfile on 2026-09-24 after the gate passed. The
+parity suite now skips locally once `brew bundle cleanup` removes stow; CI
+still builds 2.4.1 and runs it.
 
 ## Autonomy
 
