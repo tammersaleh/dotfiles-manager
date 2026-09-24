@@ -42,14 +42,29 @@ func TestBinary_ExitCodes(t *testing.T) {
 		wantErr    string // error code in the stderr JSON, empty for none
 	}{
 		{"version", []string{"version"}, 0, "9.8.7\n", ""},
-		{"install stub", []string{"install"}, 1, "", "not_implemented"},
+		{"stub", []string{"status"}, 1, "", "not_implemented"},
+		{"install empty root", []string{"install"}, 1, "", "package_missing"},
+		{"conflict", []string{"install"}, 2, "", "conflict"},
 		{"bad args", []string{"nope"}, 1, "", "invalid_arguments"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := exec.Command(bin, tt.args...)
 			// Keep the subprocess away from the real ~/dotfiles.
-			c.Env = append(os.Environ(), "DFM_ROOT="+t.TempDir(), "DFM_TARGET="+t.TempDir())
+			root, target := t.TempDir(), t.TempDir()
+			if tt.name == "conflict" {
+				for _, pkg := range []string{"public", "private"} {
+					if err := os.MkdirAll(filepath.Join(root, pkg), 0o755); err != nil {
+						t.Fatal(err)
+					}
+				}
+				for _, dir := range []string{filepath.Join(root, "public"), target} {
+					if err := os.WriteFile(filepath.Join(dir, ".examplerc"), nil, 0o644); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			c.Env = append(os.Environ(), "DFM_ROOT="+root, "DFM_TARGET="+target)
 			var stderr strings.Builder
 			c.Stderr = &stderr
 			stdout, err := c.Output()

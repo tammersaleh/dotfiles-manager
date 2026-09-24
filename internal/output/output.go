@@ -45,6 +45,13 @@ func (e *Error) ExitCode() int {
 	return e.Code
 }
 
+// Reported is returned by a command that has already written its error
+// lines to stderr (conflicts, one line each) and only needs the process to
+// exit with Code. cmd.Run prints nothing for it.
+type Reported struct{ Code int }
+
+func (r *Reported) Error() string { return fmt.Sprintf("exit %d", r.Code) }
+
 // Meta is the _meta trailer that ends every --json stream. HasMore is
 // always emitted for parity with the sibling CLIs; the counters are
 // omitted when zero so commands without them (version) stay minimal.

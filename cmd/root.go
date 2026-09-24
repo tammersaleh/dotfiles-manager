@@ -122,6 +122,10 @@ func Run(args []string, stdout, stderr io.Writer) (code int) {
 	}
 
 	if err := ctx.Run(&cli); err != nil {
+		var reported *output.Reported
+		if errors.As(err, &reported) {
+			return reported.Code
+		}
 		var oErr *output.Error
 		if !errors.As(err, &oErr) {
 			oErr = &output.Error{Err: "general_error", Detail: err.Error(), Code: output.ExitGeneral}

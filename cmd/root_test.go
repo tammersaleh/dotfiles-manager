@@ -48,21 +48,23 @@ func mustParse(t *testing.T, args ...string) *cmd.CLI {
 }
 
 func TestStubs_NotImplemented(t *testing.T) {
+	// Never let a stub that grows up run against the real ~/dotfiles.
+	t.Setenv("DFM_ROOT", t.TempDir())
+	t.Setenv("DFM_TARGET", t.TempDir())
 	tests := []struct {
 		name    string
 		args    []string
 		command string // expected "dfm <command>" in detail
 	}{
-		{"install", []string{"install"}, "install"},
 		{"public", []string{"public", ".examplerc"}, "public"},
 		{"private", []string{"private", ".examplerc"}, "private"},
 		{"ignore", []string{"ignore", ".examplerc"}, "ignore"},
 		{"pull", []string{"pull"}, "pull"},
 		{"pull --no-hooks", []string{"pull", "--no-hooks"}, "pull"},
 		{"status", []string{"status"}, "status"},
-		{"install --json", []string{"--json", "install"}, "install"},
-		{"install --quiet", []string{"--quiet", "install"}, "install"},
-		{"install --dry-run", []string{"--dry-run", "install"}, "install"},
+		{"status --json", []string{"--json", "status"}, "status"},
+		{"status --quiet", []string{"--quiet", "status"}, "status"},
+		{"status --dry-run", []string{"--dry-run", "status"}, "status"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
