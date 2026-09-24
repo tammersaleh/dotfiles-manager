@@ -145,3 +145,30 @@ func TestAheadBehind_NotARepo(t *testing.T) {
 		t.Fatalf("want git_failed exit 4, got %v", err)
 	}
 }
+
+// TestStatus_HonorsGlobalExcludes pins the parity decision: a file hidden
+// by the user's global excludes file is not dirty, exactly as `git status`
+// by hand would report.
+func TestStatus_HonorsGlobalExcludes(t *testing.T) {
+	dir, _ := seed(t)
+	cfg := filepath.Join(t.TempDir(), "gitconfig")
+	excludes := filepath.Join(t.TempDir(), "excludes")
+	if err := os.WriteFile(excludes, []byte(".DS_Store\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfg, []byte("[core]\n\texcludesFile = "+excludes+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GIT_CONFIG_GLOBAL", cfg)
+	if err := os.WriteFile(filepath.Join(dir, ".DS_Store"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	st, err := gitx.Status(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Dirty {
+		t.Errorf("globally excluded file reported dirty: %+v", st)
+	}
+}

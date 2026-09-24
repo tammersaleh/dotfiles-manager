@@ -1,7 +1,10 @@
 // Package gitx shells out to git for the package repositories. No go-git.
-// Every process runs with a hermetic config (no global or system gitconfig,
-// no terminal prompts) and GIT_OPTIONAL_LOCKS=0 so read-only queries never
-// touch the index. Failures are *output.Error with code git_failed, exit 4.
+// The user's gitconfig is honored, as the bash script's plain `git status`
+// did (a global core.excludesFile must hide the same files here). Every
+// process runs with GIT_TERMINAL_PROMPT=0 and GIT_OPTIONAL_LOCKS=0 so
+// read-only queries never prompt and never touch the index. Tests isolate
+// the config through the environment (gittest.Isolate). Failures are
+// *output.Error with code git_failed, exit 4.
 package gitx
 
 import (
@@ -96,8 +99,6 @@ func run(dir string, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(),
-		"GIT_CONFIG_GLOBAL=/dev/null",
-		"GIT_CONFIG_NOSYSTEM=1",
 		"GIT_TERMINAL_PROMPT=0",
 		"GIT_OPTIONAL_LOCKS=0",
 	)
