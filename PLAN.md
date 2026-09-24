@@ -51,7 +51,7 @@ Each entry is one sub-agent run and one release (or none for `chore:`).
 6. [x] `feat: dfm pull` (111ad4e, 2026-09-24; push pending SSH) - dirty check across both packages first, fetch and
    rebase per package, install, hooks with `cwd`, `--no-hooks`,
    `hook_failed`, exit 4 on git failure. Full layer 3 cases.
-7. [ ] Skill and README pass - `skills/dotfiles-manager/SKILL.md` and
+7. [x] Skill and README pass (20b9048, 61fa7c8, 70f8768, 2026-09-24) - `skills/dotfiles-manager/SKILL.md` and
    `README.md` describe the real surface. `docs:`, no release.
 8. [ ] Layer 4 release gate, by hand, WITH TAMMER. Snapshot, `dfm install
    --dry-run` expecting zero actions, `dfm status`, `dfm install`, diff.

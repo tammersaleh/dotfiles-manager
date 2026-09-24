@@ -206,11 +206,16 @@ what the wrapped commands print (`git status` in `pull`). `--json` mode:
 
 ```
 $ dfm install --json
-{"action":"link","package":"public","path":".zshenv","target":"dotfiles/public/.zshenv"}
+{"action":"link","package":"public","path":".zshenv","target":"../dotfiles/public/.zshenv"}
 {"action":"unlink","package":"private","path":".old-thing","reason":"source_missing"}
+{"action":"mkdir","path":".config"}
 {"action":"unfold","package":"public","path":".config"}
-{"_meta":{"has_more":false,"created":1,"removed":1,"unfolded":1,"refolded":0}}
+{"_meta":{"has_more":false,"created":1,"removed":1,"unfolded":1}}
 ```
+
+Actions are `link`, `unlink`, `mkdir`, `rmdir`, `unfold`, `refold`. `mkdir`
+and `rmdir` rows have no `package`. Zero-valued `_meta` counters are omitted
+for every command.
 
 Fatal errors are a single JSON object on stderr regardless of `--json`:
 
