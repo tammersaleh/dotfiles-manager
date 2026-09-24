@@ -61,6 +61,12 @@ type Meta struct {
 	Removed  int  `json:"removed,omitempty"`
 	Unfolded int  `json:"unfolded,omitempty"`
 	Refolded int  `json:"refolded,omitempty"`
+
+	// status counters
+	Dirty       int `json:"dirty,omitempty"`
+	Conflicts   int `json:"conflicts,omitempty"`
+	BrokenLinks int `json:"broken_links,omitempty"`
+	Pending     int `json:"pending,omitempty"`
 }
 
 type metaWrapper struct {

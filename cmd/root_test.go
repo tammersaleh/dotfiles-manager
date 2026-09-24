@@ -61,10 +61,8 @@ func TestStubs_NotImplemented(t *testing.T) {
 		{"ignore", []string{"ignore", ".examplerc"}, "ignore"},
 		{"pull", []string{"pull"}, "pull"},
 		{"pull --no-hooks", []string{"pull", "--no-hooks"}, "pull"},
-		{"status", []string{"status"}, "status"},
-		{"status --json", []string{"--json", "status"}, "status"},
-		{"status --quiet", []string{"--quiet", "status"}, "status"},
-		{"status --dry-run", []string{"--dry-run", "status"}, "status"},
+		{"pull --json", []string{"--json", "pull"}, "pull"},
+		{"pull --quiet", []string{"--quiet", "pull"}, "pull"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
