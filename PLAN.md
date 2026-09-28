@@ -145,6 +145,11 @@ Give every feature agent:
   link to `~/post-pull.sh` and conflict.
 - 2026-09-24: `gitx.run` takes a readOnly flag; only queries get
   GIT_OPTIONAL_LOCKS=0. `internal/hook` runs post-pull hooks.
+- 2026-09-28: First real `dfm pull` failed in the public hook: mise's `uv`
+  shim shadowed brew's uv and errored outside a pinned project, so
+  `brew bundle` died on `uv 'amazon-orders[browser]'`. Fixed with
+  `activate_shims = false` in `~/.config/mise/config.toml`, adopted into
+  public (e9985a3). Rerun completed, stow uninstalled by bundle cleanup.
 - 2026-09-23: `cmd.Run(args, stdout, stderr) int` is the in-process entry
   point. `--root`/`--target` resolve lazily via `cli.RootDir()`/`TargetDir()`
   so tests override with `t.Setenv("HOME", t.TempDir())`. Kong exit is
