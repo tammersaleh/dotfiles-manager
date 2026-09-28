@@ -150,6 +150,26 @@ Give every feature agent:
   `brew bundle` died on `uv 'amazon-orders[browser]'`. Fixed with
   `activate_shims = false` in `~/.config/mise/config.toml`, adopted into
   public (e9985a3). Rerun completed, stow uninstalled by bundle cleanup.
+- 2026-09-28: `skills` CLI (vercel-labs/skills 1.5.7) does `rm -rf` on
+  `~/.agents/skills/<name>` on every add and update, destroying a dfm link.
+  Dotfiles now track only `~/.agents/.skill-lock.json` (private);
+  `~/packages/go` reinstalls missing lock entries with
+  `skills add SRC -g -y -s NAME -a claude-code -a universal </dev/null`.
+  A single `-a` makes it copy into `~/.claude/skills` instead of using the
+  canonical dir; `skills add` also eats stdin, hence `</dev/null`.
+- 2026-09-28: The "dangling links in a directory the package no longer has
+  are never cleaned" parity rule bit for real: private dropped
+  `.agents/skills/` entirely and `~/.agents/skills/lattice-cli` stayed
+  dangling. `dfm status` does not report it either. Candidate `fix:` or a
+  status warning; see todo/.
+- 2026-09-28: Pushing to an HTTPS URL never updates `refs/remotes/origin/*`,
+  so `dfm status` reports "ahead N" after a successful push. Refresh with
+  `git update-ref refs/remotes/origin/master <sha>` from `git ls-remote`, or
+  push through the named remote. A `git fetch URL master:refs/remotes/origin/master`
+  errored with "cannot lock ref" and left public without the ref at all.
+- 2026-09-28: Piping jq output over a dfm-linked file with `mv tmp file`
+  replaces the symlink with a real file (conflict on next install). Edit
+  through the link (`jq ... > tmp && cat tmp > file`) or edit the repo copy.
 - 2026-09-23: `cmd.Run(args, stdout, stderr) int` is the in-process entry
   point. `--root`/`--target` resolve lazily via `cli.RootDir()`/`TargetDir()`
   so tests override with `t.Setenv("HOME", t.TempDir())`. Kong exit is
