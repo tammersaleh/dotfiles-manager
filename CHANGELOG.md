@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/tammersaleh/dotfiles-manager/compare/v1.2.0...v1.2.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* **release:** migrate cask post-install hook to install_steps ([03174b9](https://github.com/tammersaleh/dotfiles-manager/commit/03174b9f50fbc30ac16b51e966e0f7748bb19930))
+
 ## [1.2.0](https://github.com/tammersaleh/dotfiles-manager/compare/v1.1.0...v1.2.0) (2026-09-24)
 
 
