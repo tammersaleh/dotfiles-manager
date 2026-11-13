@@ -133,11 +133,13 @@ down.
 
 ## Release versioning
 
-Releases are automated via release-please + GoReleaser. Release-please watches
-main; a version-bumping commit opens a release PR that auto-merges once CI is
-green; the merge cuts a tag and GitHub Release; GoReleaser builds binaries and
-updates the Homebrew cask. Nobody runs `git tag` by hand and nobody clicks
-Merge on the release PR.
+Releases are automated via release-please + GoReleaser. `release.yml` runs
+`verify` (the steps in `ci.yml` plus govulncheck) on every push to main except
+the release commit itself. Release-please runs only after `verify` passes. A
+version-bumping commit opens a release PR that merges at once. The merge push
+cuts a tag and GitHub Release. GoReleaser builds binaries and updates the
+Homebrew cask. Nobody runs `git tag` by hand and nobody clicks Merge on the
+release PR.
 
 Commit type is the release trigger, not a style choice:
 
@@ -152,14 +154,11 @@ avoid a release or upgrade one to force it; imperative subject under ~70 chars
 (release-please quotes it verbatim). The version number is never a reason to
 ask. Pick the type, say in one line why, push.
 
-Pushing a non-releasing commit to main after the release PR opens leaves that
-PR `BEHIND` and auto-merge never fires. Either push cleanup before the
-`feat:`/`fix:`, or when `gh pr view N --json mergeStateStatus` says `BEHIND`,
-run `gh pr update-branch N`.
-
-The `RELEASE_PAT` repository secret (user-attributed PAT with `repo` scope,
-shared with the siblings) comes from the "Github Release Automation Token"
-item in the personal 1Password vault. If it ever needs resetting: `op item get`
+Two repository secrets. `RELEASE_PAT` (fine-grained, the six CLI repos,
+contents and pull requests write) opens and merges the release PR. It cannot
+write the tap. `HOMEBREW_TAP_TOKEN` (tap repo only) pushes the cask.
+`RELEASE_PAT` comes from the "Github Release Automation Token" item in the
+personal 1Password vault. If a secret ever needs resetting: `op item get`
 must carry `--account my.1password.com` (two accounts are signed in and an
 unscoped call returns nothing on stdout), and `gh secret set` accepts empty
 stdin without complaint, so check the value's length before piping. An empty
@@ -218,8 +217,18 @@ golangci-lint is v2. `errcheck` is disabled for `_test.go` only
 ## Git
 
 Personal project. Commit on a branch or directly on main, merge, push. Don't
-open pull requests; `gh pr create` is not part of any flow here. The only PR is
-the release-please automation PR.
+open pull requests; `gh pr create` is not part of any flow here. The only PRs
+are release-please's and Dependabot's.
+
+Dependabot opens monthly grouped PRs for `gomod` and `github-actions`, and
+`pr.yml` merges them once tests pass. A merged bump cuts no release by itself.
+It ships with the next pushed release. Major versions are ignored, so bump
+those by hand.
+
+Three workflow files: `ci.yml` holds the test steps and is reusable only,
+`pr.yml` calls it for pull requests and merges Dependabot PRs, `release.yml`
+calls it as `verify` for pushes to main. Jobs in `ci.yml` must stay at
+`contents: read`. A called workflow cannot request more than its caller grants.
 
 The SSH remote key is fingerprint-gated, so a non-interactive `git push origin`
 over SSH fails. Push over HTTPS with the gh credential helper (`gh auth
