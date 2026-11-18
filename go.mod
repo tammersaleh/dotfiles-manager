@@ -1,5 +1,5 @@
 module github.com/tammersaleh/dotfiles-manager
 
-go 1.25
+go 1.27.0
 
 require github.com/alecthomas/kong v1.14.0
