@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/tammersaleh/dotfiles-manager/compare/v1.2.1...v1.2.2) (2026-11-24)
+
+
+### Bug Fixes
+
+* build with Go 1.27 ([1abd0b8](https://github.com/tammersaleh/dotfiles-manager/commit/1abd0b8dc5389fbe8a566aea65e1ae1f33d603ed))
+
 ## [1.2.1](https://github.com/tammersaleh/dotfiles-manager/compare/v1.2.0...v1.2.1) (2026-11-05)
 
 
